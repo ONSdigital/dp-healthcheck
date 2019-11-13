@@ -1,4 +1,4 @@
-package HealthCheck
+package healthcheck
 
 import (
 	rchttp "github.com/ONSdigital/dp-rchttp"

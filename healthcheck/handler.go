@@ -1,4 +1,4 @@
-package HealthCheck
+package healthcheck
 
 import (
 	"encoding/json"

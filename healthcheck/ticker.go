@@ -1,10 +1,11 @@
-package HealthCheck
+package healthcheck
 
 import (
 	"context"
 	"github.com/ONSdigital/go-ns/log"
 	"time"
 )
+
 type ticker struct {
 	TimeTicker *time.Ticker
 	Closing    chan bool
@@ -30,7 +31,7 @@ func (ticker ticker) start(ctx context.Context) {
 		defer close(ticker.Closed)
 		for {
 			select {
-			case <- ctx.Done():
+			case <-ctx.Done():
 				ticker.stop()
 			case <-ticker.Closing:
 				return

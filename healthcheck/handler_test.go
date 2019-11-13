@@ -1,1 +1,1 @@
-package HealthCheck
+package healthcheck
