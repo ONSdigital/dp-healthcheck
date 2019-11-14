@@ -45,7 +45,7 @@ func (ticker ticker) start(ctx context.Context) {
 // runCheck runs a checker function on a single client associated to the ticker
 func (ticker ticker) runCheck(ctx context.Context) {
 	checker := *ticker.Client.Checker
-	checkResults, err := checker.CheckAppHealth(&ctx)
+	checkResults, err := checker(&ctx)
 	if err != nil {
 		log.ErrorC("unsuccessful Health check", err, log.Data{"external_service": ticker.Client.Check.Name})
 	} else {

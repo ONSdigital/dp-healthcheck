@@ -15,19 +15,20 @@ func TestCreate(t *testing.T) {
 		version := "1.0.0"
 		criticalTimeout := 15 * time.Second
 		interval := 3 * time.Second
-
-		var sc Checker = someChecker{}
-		scPointer := &sc
+		checkerFunc := Checker(func(ctx *context.Context) (check *Check, err error) {
+			return
+		})
+		checkerFuncPointer := &checkerFunc
 		client := Client{
 			Clienter:   rchttp.NewClient(),
 			Check:      nil,
-			Checker:    scPointer,
+			Checker:    checkerFuncPointer,
 			MutexCheck: &sync.Mutex{},
 		}
 		clients := []*Client{&client}
-		timeBeforeCreation := time.Now()
+		timeBeforeCreation := time.Now().UTC()
 		hc := Create(ctx, version, criticalTimeout, interval, clients)
-		timeAfterCreation := time.Now()
+		timeAfterCreation := time.Now().UTC()
 		So(hc.Clients[0], ShouldEqual, &client)
 		So(hc.Version, ShouldEqual, "1.0.0")
 		So(hc.StartTime.After(timeBeforeCreation), ShouldEqual, true)
@@ -36,17 +37,10 @@ func TestCreate(t *testing.T) {
 		So(len(hc.Tickers), ShouldEqual, 1)
 	})
 }
-
 // TODO ... How to test ticker.Ticker stop func
 func TestStop(t *testing.T) {
 	Convey("Stop tickers", t, func() {
 
 	})
-}
-type someChecker struct {
-}
-
-func (sc someChecker) CheckAppHealth(ctx *context.Context) (check *Check, err error) {
-	return
 }
 

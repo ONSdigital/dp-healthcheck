@@ -2,40 +2,22 @@ package healthcheck
 
 import (
 	"context"
-	"fmt"
-	rchttp "github.com/ONSdigital/dp-rchttp"
 	. "github.com/smartystreets/goconvey/convey"
-	"net/http"
-	"net/http/httptest"
-	"sync"
 	"testing"
 )
 
-var client = &rchttp.Client{HTTPClient: &http.Client{}}
-var ctx = context.Background()
-
-type MockedHTTPResponse struct {
-	StatusCode int
-	Body       string
-}
-
-func getMockHealthCheckAPI(expectRequest http.Request, mockedHTTPResponse MockedHTTPResponse) *Client {
-	httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != expectRequest.Method {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("unexpected HTTP method used"))
+func TestCreateNew(t *testing.T) {
+	Convey("Create a new Client", t, func() {
+		checkerFunc := Checker(func(ctx *context.Context) (check *Check, err error) {
 			return
-		}
-		w.WriteHeader(mockedHTTPResponse.StatusCode)
-		fmt.Fprintln(w, mockedHTTPResponse.Body)
-	}))
-	sc := Checker(someChecker)
-	return NewClient(nil, )
-	}
-}
+		})
+		checkerFuncPointer := &checkerFunc
 
-func TestHealthCheck_Handler(t *testing.T) {
-	Convey("Create a new Health Check", t, func() {
-
+		cli := NewClient(nil, checkerFuncPointer)
+		So(cli.Checker, ShouldEqual, &checkerFunc)
+		So(cli.MutexCheck, ShouldNotBeNil)
+		So(cli.Clienter, ShouldNotBeNil)
+		So(cli.Check, ShouldBeNil)
 	})
+
 }

@@ -15,16 +15,16 @@ const (
 
 // Handler returns the current health check of the app
 func (hc HealthCheck) Handler(w http.ResponseWriter, req *http.Request) {
-	now := time.Now()
+	now := time.Now().UTC()
 	ctx := req.Context()
 
-	var checks []*Check
+	var checks []Check
 	var status string
 
 	status = hc.getAppHealth()
 	for _, client := range hc.Clients {
 		if client.Check != nil{
-			checks = append(checks, client.Check)
+			checks = append(checks, *client.Check)
 		}
 	}
 
@@ -37,6 +37,7 @@ func (hc HealthCheck) Handler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	b, err := json.Marshal(hr)
+
 	if err != nil {
 		log.InfoCtx(ctx, "failed to marshal json", log.Data{"error": err, "HealthCheck": hr})
 		return
@@ -82,7 +83,7 @@ func (hc HealthCheck)isOverallAppHealthy() string {
 
 // isCheckHealthy returns a string for the status on if an individual dependent apps health
 func (hc HealthCheck)isCheckHealthy(c *Check) string {
-	now := time.Now()
+	now := time.Now().UTC()
 	status := StatusOK
 	if c.Status == StatusCritical{
 		criticalTimeThreshold := hc.TimeOfFirstCriticalError.Add(hc.CriticalErrorTimeout)
