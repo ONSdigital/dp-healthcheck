@@ -1,13 +1,11 @@
-package HealthCheck
+package healthcheck
 
 import (
 	"context"
 	"time"
 )
 
-type Checker interface {
-	CheckAppHealth(ctx *context.Context) (check *Check, err error)
-}
+type Checker func(*context.Context) (*Check, error)
 
 type Check struct {
 	Name        string    `json:"name"`
@@ -24,16 +22,16 @@ type HealthResponse struct {
 	Version   string        `json:"version"`
 	Uptime    time.Duration `json:"uptime"`
 	StartTime time.Time     `json:"start_time"`
-	Checks    []*Check      `json:"checks"`
+	Checks    []Check       `json:"checks"`
 }
 
 type HealthCheck struct {
-	Clients                   []*Client
-	Version                   string
-	StartTime                 time.Time
-	CriticalErrorTimeout      time.Duration
-	TimeOfFirstCriticalError  time.Time
-	Tickers                   []*ticker
+	Clients                  []*Client
+	Version                  string
+	StartTime                time.Time
+	CriticalErrorTimeout     time.Duration
+	TimeOfFirstCriticalError time.Time
+	Tickers                  []*ticker
 }
 
 // Create returns a new instantiated HealthCheck object. Caller to provide:
@@ -48,9 +46,9 @@ func Create(ctx context.Context, version string, criticalTimeout, interval time.
 	hc := HealthCheck{
 		Clients:              clients,
 		Version:              version,
-		StartTime:            time.Now(),
+		StartTime:            time.Now().UTC(),
 		CriticalErrorTimeout: criticalTimeout,
-		Tickers: tickers,
+		Tickers:              tickers,
 	}
 
 	hc.start(ctx)
