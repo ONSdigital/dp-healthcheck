@@ -47,7 +47,12 @@ func (ticker ticker) runCheck(ctx context.Context) {
 	checker := *ticker.Client.Checker
 	checkResults, err := checker(&ctx)
 	if err != nil {
-		log.ErrorC("unsuccessful Health check", err, log.Data{"external_service": ticker.Client.Check.Name})
+		// If first check has failed then there is no way to know which app it was attempting to check
+		if ticker.Client.Check != nil {
+			log.Error(err, log.Data{"external_service": ticker.Client.Check.Name})
+		} else {
+			log.Error(err, nil)
+		}
 	} else {
 		ticker.Client.MutexCheck.Lock()
 		ticker.Client.Check = checkResults
