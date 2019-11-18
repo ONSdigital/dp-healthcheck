@@ -39,7 +39,7 @@ func TestCreate(t *testing.T) {
 		client := Client{
 			Clienter:   rchttp.NewClient(),
 			Checker:    checkerFuncPointer,
-			MutexCheck: &sync.Mutex{},
+			mutex: &sync.Mutex{},
 		}
 		clients := []*Client{&client}
 		timeBeforeCreation := time.Now().UTC()
@@ -49,10 +49,10 @@ func TestCreate(t *testing.T) {
 		So(hc.StartTime.After(timeBeforeCreation), ShouldEqual, true)
 		So(hc.StartTime.Before(time.Now().UTC()), ShouldEqual, true)
 		So(hc.CriticalErrorTimeout, ShouldEqual, criticalTimeout)
-		So(len(hc.Tickers), ShouldEqual, 1)
+		So(len(hc.tickers), ShouldEqual, 1)
 		Convey("After check function has run, ensure it has correctly stored the results", func() {
 			time.Sleep(2 * time.Millisecond)
-			checkResponse := *hc.Tickers[0].Client.Check
+			checkResponse := *hc.tickers[0].client.Check
 			So(checkResponse, ShouldResemble, healthyCheck1)
 		})
 	})
@@ -66,13 +66,13 @@ func TestCreate(t *testing.T) {
 		client := Client{
 			Clienter:   rchttp.NewClient(),
 			Checker:    checkerFuncPointer,
-			MutexCheck: &sync.Mutex{},
+			mutex: &sync.Mutex{},
 		}
 		clients := []*Client{&client}
 		hc := Create(ctx, version, criticalTimeout, interval, clients)
 		Convey("After check function has run, ensure it has correctly stored the results", func() {
 			time.Sleep(2 * time.Millisecond)
-			So(hc.Tickers[0].Client.Check, ShouldBeNil)
+			So(hc.tickers[0].client.Check, ShouldBeNil)
 		})
 	})
 	Convey("Create a new Health Check given 1 successful check followed by a broken run check", t, func() {
@@ -85,14 +85,14 @@ func TestCreate(t *testing.T) {
 		client := Client{
 			Clienter:   rchttp.NewClient(),
 			Checker:    checkerFuncPointer,
-			MutexCheck: &sync.Mutex{},
+			mutex: &sync.Mutex{},
 		}
 		client.Check = &healthyCheck1
 		clients := []*Client{&client}
 		hc := Create(ctx, version, criticalTimeout, interval, clients)
 		Convey("After check function has run, the original check should not be overwritten by the failed check", func() {
 			time.Sleep(2 * time.Millisecond)
-			checkResponse := *hc.Tickers[0].Client.Check
+			checkResponse := *hc.tickers[0].client.Check
 			So(checkResponse, ShouldResemble, healthyCheck1)
 		})
 	})

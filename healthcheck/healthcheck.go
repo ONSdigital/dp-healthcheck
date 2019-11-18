@@ -17,21 +17,16 @@ type Check struct {
 	LastFailure time.Time `json:"last_failure"`
 }
 
-type HealthResponse struct {
-	Status    string        `json:"status"`
-	Version   string        `json:"version"`
-	Uptime    time.Duration `json:"uptime"`
-	StartTime time.Time     `json:"start_time"`
-	Checks    []Check       `json:"checks"`
-}
-
 type HealthCheck struct {
-	Clients                  []*Client
-	Version                  string
-	StartTime                time.Time
-	CriticalErrorTimeout     time.Duration
-	TimeOfFirstCriticalError time.Time
-	Tickers                  []*ticker
+	Status                   string        `json:"status"`
+	Version                  string        `json:"version"`
+	Uptime                   time.Duration `json:"uptime"`
+	StartTime                time.Time     `json:"start_time"`
+	Checks                   []Check       `json:"checks"`
+	Clients                  []*Client     `json:"-"`
+	CriticalErrorTimeout     time.Duration `json:"-"`
+	TimeOfFirstCriticalError time.Time     `json:"-"`
+	tickers                  []*ticker     `json:"-"`
 }
 
 // Create returns a new instantiated HealthCheck object. Caller to provide:
@@ -48,7 +43,7 @@ func Create(ctx context.Context, version string, criticalTimeout, interval time.
 		Version:              version,
 		StartTime:            time.Now().UTC(),
 		CriticalErrorTimeout: criticalTimeout,
-		Tickers:              tickers,
+		tickers:              tickers,
 	}
 
 	hc.start(ctx)
@@ -68,14 +63,14 @@ func newTickers(interval time.Duration, clients []*Client) []*ticker {
 
 // start begins each ticker, this is used to run the health checks on dependent apps
 func (hc HealthCheck) start(ctx context.Context) {
-	for _, ticker := range hc.Tickers {
+	for _, ticker := range hc.tickers {
 		ticker.start(ctx)
 	}
 }
 
 // Stop will cancel all tickers and cancel all contexts as a result canceling all active health checks
 func (hc HealthCheck) Stop() {
-	for _, ticker := range hc.Tickers {
+	for _, ticker := range hc.tickers {
 		ticker.stop()
 	}
 }

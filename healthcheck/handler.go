@@ -20,27 +20,22 @@ func (hc HealthCheck) Handler(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 
 	var checks []Check
-	var status string
 
-	status = hc.getAppHealth()
 	for _, client := range hc.Clients {
 		if client.Check != nil {
 			checks = append(checks, *client.Check)
 		}
 	}
 
-	hr := HealthResponse{
-		Status:    status,
-		Version:   hc.Version,
-		Uptime:    now.Sub(hc.StartTime),
-		StartTime: hc.StartTime,
-		Checks:    checks,
-	}
+	hc.Status = hc.getStatus()
+	hc.Uptime = now.Sub(hc.StartTime)
+		hc.Checks =    checks
 
-	b, err := json.Marshal(hr)
+
+	b, err := json.Marshal(hc)
 
 	if err != nil {
-		log.ErrorCtx(ctx, errors.Wrap(err, "failed to marshal json"), log.Data{"error": err, "HealthCheckResponse": hr})
+		log.ErrorCtx(ctx, errors.Wrap(err, "failed to marshal json"), log.Data{"error": err, "health_check_response": hc})
 		return
 	}
 
@@ -61,20 +56,20 @@ func (hc HealthCheck) isAppStartingUp() bool {
 	return false
 }
 
-// getAppHealth returns a status as string as to the overall current apps health based on its dependent apps health
-func (hc HealthCheck) getAppHealth() string {
+// getStatus returns a status as string as to the overall current apps health based on its dependent apps health
+func (hc HealthCheck) getStatus() string {
 	if hc.isAppStartingUp() {
 		return StatusWarning
 	}
-	return hc.isOverallAppHealthy()
+	return hc.isAppHealthy()
 }
 
-// isOverallAppHealthy checks every clients check for their health then produces and returns a status for this apps health
-func (hc HealthCheck) isOverallAppHealthy() string {
+// isAppHealthy checks every clients check for their health then produces and returns a status for this apps health
+func (hc HealthCheck) isAppHealthy() string {
 	status := StatusOK
 	defer unlockAllClientChecks(hc.Clients)
 	for _, client := range hc.Clients {
-		client.MutexCheck.Lock()
+		client.mutex.Lock()
 		appHealth := hc.isCheckHealthy(client.Check)
 		if appHealth == StatusCritical {
 			return StatusCritical
@@ -88,27 +83,27 @@ func (hc HealthCheck) isOverallAppHealthy() string {
 // unlockAllClientChecks unlocks all locks on checks for clients
 func unlockAllClientChecks(c []*Client) {
 	for _, client := range c {
-		client.MutexCheck.Unlock()
+		client.mutex.Unlock()
 	}
 }
 
 // isCheckHealthy returns a string for the status on if an individual dependent apps health
 func (hc HealthCheck) isCheckHealthy(c *Check) string {
 	now := time.Now().UTC()
-	status := StatusOK
-	if c.Status == StatusCritical {
+	if c.Status == StatusWarning {
+		return StatusWarning
+	} else if c.Status != StatusCritical {
+		return StatusOK
+	} else {
+		status := StatusWarning
 		criticalTimeThreshold := hc.TimeOfFirstCriticalError.Add(hc.CriticalErrorTimeout)
 		if c.LastSuccess.Before(hc.TimeOfFirstCriticalError) && now.After(criticalTimeThreshold) {
 			status = StatusCritical
-		} else {
-			status = StatusWarning
 		}
 		// Set timestamp of first critical error to now
 		if c.LastSuccess.After(hc.TimeOfFirstCriticalError) {
 			hc.TimeOfFirstCriticalError = now
 		}
-	} else if c.Status == StatusWarning {
-		status = StatusWarning
+		return status
 	}
-	return status
 }

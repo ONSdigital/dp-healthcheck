@@ -15,7 +15,7 @@ func TestCreateNew(t *testing.T) {
 
 		cli := NewClient(nil, checkerFuncPointer)
 		So(cli.Checker, ShouldEqual, &checkerFunc)
-		So(cli.MutexCheck, ShouldNotBeNil)
+		So(cli.mutex, ShouldNotBeNil)
 		So(cli.Clienter, ShouldNotBeNil)
 		So(cli.Check, ShouldBeNil)
 	})

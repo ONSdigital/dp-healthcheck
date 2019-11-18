@@ -36,7 +36,7 @@ func createHealthCheck(checks []Check, startTime time.Time, critErrTimeout time.
 		StartTime:                startTime,
 		CriticalErrorTimeout:     critErrTimeout,
 		TimeOfFirstCriticalError: firstCritErr,
-		Tickers:                  nil,
+		tickers:                  nil,
 	}
 	return hc
 }
@@ -61,18 +61,18 @@ func runHealthCheckHandlerAndTest(t *testing.T, hc HealthCheck, desiredStatus, t
 	if err != nil {
 		log.Error(err, nil)
 	}
-	var healthResponse HealthResponse
-	err = json.Unmarshal(b, &healthResponse)
+	var healthCheck HealthCheck
+	err = json.Unmarshal(b, &healthCheck)
 	if err != nil {
 		log.Error(err, nil)
 	}
 	So(w.Code, ShouldEqual, 200)
-	So(healthResponse.Status, ShouldEqual, desiredStatus)
-	So(healthResponse.Version, ShouldEqual, testVersion)
-	So(healthResponse.StartTime, ShouldEqual, testStartTime)
-	So(healthResponse.Checks, ShouldResemble, checks)
-	So(healthResponse.Uptime, ShouldNotBeNil)
-	So(time.Now().UTC().After(healthResponse.StartTime.Add(healthResponse.Uptime)), ShouldBeTrue)
+	So(healthCheck.Status, ShouldEqual, desiredStatus)
+	So(healthCheck.Version, ShouldEqual, testVersion)
+	So(healthCheck.StartTime, ShouldEqual, testStartTime)
+	So(healthCheck.Checks, ShouldResemble, checks)
+	So(healthCheck.Uptime, ShouldNotBeNil)
+	So(time.Now().UTC().After(healthCheck.StartTime.Add(healthCheck.Uptime)), ShouldBeTrue)
 }
 
 func TestHandler(t *testing.T) {
@@ -171,7 +171,7 @@ func TestHandler(t *testing.T) {
 			StartTime:                testStartTime,
 			CriticalErrorTimeout:     10 * time.Minute,
 			TimeOfFirstCriticalError: testStartTime.Add(time.Duration(-30) * time.Minute),
-			Tickers:                  nil,
+			tickers:                  nil,
 		}
 		runHealthCheckHandlerAndTest(t, hc, StatusOK, testVersion, testStartTime, checks)
 	})
