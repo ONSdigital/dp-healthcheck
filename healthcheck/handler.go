@@ -29,8 +29,7 @@ func (hc HealthCheck) Handler(w http.ResponseWriter, req *http.Request) {
 
 	hc.Status = hc.getStatus()
 	hc.Uptime = now.Sub(hc.StartTime)
-		hc.Checks =    checks
-
+	hc.Checks = checks
 
 	b, err := json.Marshal(hc)
 
@@ -67,10 +66,8 @@ func (hc HealthCheck) getStatus() string {
 // isAppHealthy checks every clients check for their health then produces and returns a status for this apps health
 func (hc HealthCheck) isAppHealthy() string {
 	status := StatusOK
-	defer unlockAllClientChecks(hc.Clients)
 	for _, client := range hc.Clients {
-		client.mutex.Lock()
-		appHealth := hc.isCheckHealthy(client.Check)
+		appHealth := hc.readAppHealth(client)
 		if appHealth == StatusCritical {
 			return StatusCritical
 		} else if appHealth == StatusWarning {
@@ -80,21 +77,20 @@ func (hc HealthCheck) isAppHealthy() string {
 	return status
 }
 
-// unlockAllClientChecks unlocks all locks on checks for clients
-func unlockAllClientChecks(c []*Client) {
-	for _, client := range c {
-		client.mutex.Unlock()
-	}
+// readAppHealth locks mutex then reads a check finally it unlocks the mutex.
+func (hc HealthCheck) readAppHealth(client *Client) string{
+	client.mutex.Lock()
+	defer client.mutex.Unlock()
+	return hc.isCheckHealthy(client.Check)
 }
 
 // isCheckHealthy returns a string for the status on if an individual dependent apps health
 func (hc HealthCheck) isCheckHealthy(c *Check) string {
 	now := time.Now().UTC()
-	if c.Status == StatusWarning {
-		return StatusWarning
-	} else if c.Status != StatusCritical {
-		return StatusOK
-	} else {
+	switch c.Status {
+	case StatusWarning: return StatusWarning
+	case StatusOK: return StatusOK
+	default:
 		status := StatusWarning
 		criticalTimeThreshold := hc.TimeOfFirstCriticalError.Add(hc.CriticalErrorTimeout)
 		if c.LastSuccess.Before(hc.TimeOfFirstCriticalError) && now.After(criticalTimeThreshold) {

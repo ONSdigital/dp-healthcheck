@@ -3,6 +3,7 @@ package healthcheck
 import (
 	"context"
 	"encoding/json"
+	rchttp "github.com/ONSdigital/dp-rchttp"
 	"github.com/ONSdigital/go-ns/log"
 	. "github.com/smartystreets/goconvey/convey"
 	"io/ioutil"
@@ -21,7 +22,8 @@ func createATestChecker(checkToReturn Check) *Checker {
 
 func createATestClient(checkToReturn Check, pretendHistory bool) *Client {
 	checkerFunc := createATestChecker(checkToReturn)
-	cli := NewClient(nil, checkerFunc)
+	clienter := rchttp.NewClient()
+	cli, _ := NewClient(clienter, checkerFunc)
 	if pretendHistory {
 		cli.Check = &checkToReturn
 	}

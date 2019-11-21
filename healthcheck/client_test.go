@@ -2,6 +2,7 @@ package healthcheck
 
 import (
 	"context"
+	rchttp "github.com/ONSdigital/dp-rchttp"
 	. "github.com/smartystreets/goconvey/convey"
 	"testing"
 )
@@ -12,8 +13,8 @@ func TestCreateNew(t *testing.T) {
 			return
 		})
 		checkerFuncPointer := &checkerFunc
-
-		cli := NewClient(nil, checkerFuncPointer)
+		clienter := rchttp.NewClient()
+		cli, _ := NewClient(clienter, checkerFuncPointer)
 		So(cli.Checker, ShouldEqual, &checkerFunc)
 		So(cli.mutex, ShouldNotBeNil)
 		So(cli.Clienter, ShouldNotBeNil)

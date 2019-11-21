@@ -57,9 +57,8 @@ func (ticker ticker) runCheck(ctx context.Context) {
 	}
 
 	ticker.client.mutex.Lock()
+	defer ticker.client.mutex.Unlock()
 	ticker.client.Check = checkResults
-	ticker.client.mutex.Unlock()
-
 }
 
 // stop the ticker
