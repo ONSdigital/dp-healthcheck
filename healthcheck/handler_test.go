@@ -80,7 +80,7 @@ func runHealthCheckHandlerAndTest(t *testing.T, hc HealthCheck, desiredStatus, t
 func TestHandler(t *testing.T) {
 	testVersion := "1.0.0"
 	testStartTime := time.Now().UTC().Add(time.Duration(-20) * time.Minute)
-		healthyCheck1 := Check{
+	healthyCheck1 := Check{
 		Name:        "Some App 1",
 		Status:      StatusOK,
 		StatusCode:  200,

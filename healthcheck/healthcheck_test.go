@@ -35,10 +35,9 @@ func TestCreate(t *testing.T) {
 		criticalTimeout := 15 * time.Second
 		interval := 1 * time.Millisecond
 		checkerFunc := cfok
-		checkerFuncPointer := &checkerFunc
 		client := Client{
 			Clienter:   rchttp.NewClient(),
-			Checker:    checkerFuncPointer,
+			Checker:    &checkerFunc,
 			mutex: &sync.Mutex{},
 		}
 		clients := []*Client{&client}
@@ -46,7 +45,7 @@ func TestCreate(t *testing.T) {
 		hc := Create(ctx, version, criticalTimeout, interval, clients)
 		So(hc.Clients[0], ShouldEqual, &client)
 		So(hc.Version, ShouldEqual, "1.0.0")
-		So(hc.StartTime.After(timeBeforeCreation), ShouldEqual, true)
+		So(hc.StartTime, ShouldHappenAfter, timeBeforeCreation)
 		So(hc.StartTime.Before(time.Now().UTC()), ShouldEqual, true)
 		So(hc.CriticalErrorTimeout, ShouldEqual, criticalTimeout)
 		So(len(hc.tickers), ShouldEqual, 1)

@@ -14,7 +14,7 @@ const (
 	StatusWarning  = "WARNING"
 )
 
-// Handler returns the current health check of the app
+// Handler responds to an http request for the current health status
 func (hc HealthCheck) Handler(w http.ResponseWriter, req *http.Request) {
 	now := time.Now().UTC()
 	ctx := req.Context()
@@ -32,7 +32,6 @@ func (hc HealthCheck) Handler(w http.ResponseWriter, req *http.Request) {
 	hc.Checks = checks
 
 	b, err := json.Marshal(hc)
-
 	if err != nil {
 		log.ErrorCtx(ctx, errors.Wrap(err, "failed to marshal json"), log.Data{"error": err, "health_check_response": hc})
 		return
@@ -45,7 +44,7 @@ func (hc HealthCheck) Handler(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-// isAppStartingUp returns true or false based on if each client has had results back from at least a single check
+// isAppStartingUp returns false when all clients have completed at least one check
 func (hc HealthCheck) isAppStartingUp() bool {
 	for _, client := range hc.Clients {
 		if client.Check == nil {
@@ -78,7 +77,7 @@ func (hc HealthCheck) isAppHealthy() string {
 }
 
 // readAppHealth locks mutex then reads a check finally it unlocks the mutex.
-func (hc HealthCheck) readAppHealth(client *Client) string{
+func (hc HealthCheck) readAppHealth(client *Client) string {
 	client.mutex.Lock()
 	defer client.mutex.Unlock()
 	return hc.isCheckHealthy(client.Check)
@@ -88,8 +87,10 @@ func (hc HealthCheck) readAppHealth(client *Client) string{
 func (hc HealthCheck) isCheckHealthy(c *Check) string {
 	now := time.Now().UTC()
 	switch c.Status {
-	case StatusWarning: return StatusWarning
-	case StatusOK: return StatusOK
+	case StatusWarning:
+		return StatusWarning
+	case StatusOK:
+		return StatusOK
 	default:
 		status := StatusWarning
 		criticalTimeThreshold := hc.TimeOfFirstCriticalError.Add(hc.CriticalErrorTimeout)
