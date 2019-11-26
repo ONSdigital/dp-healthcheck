@@ -57,6 +57,7 @@ func (hc HealthCheck) isAppStartingUp() bool {
 // getStatus returns a status as string as to the overall current apps health based on its dependent apps health
 func (hc HealthCheck) getStatus() string {
 	if hc.isAppStartingUp() {
+		log.Info("a dependency is still starting up", nil)
 		return StatusWarning
 	}
 	return hc.isAppHealthy()

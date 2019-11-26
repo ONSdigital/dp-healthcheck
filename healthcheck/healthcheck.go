@@ -68,7 +68,7 @@ func (hc HealthCheck) start(ctx context.Context) {
 	}
 }
 
-// Stop will cancel all tickers and cancel all contexts as a result canceling all active health checks
+// Stop will cancel all tickers and thus stop all health checks
 func (hc HealthCheck) Stop() {
 	for _, ticker := range hc.tickers {
 		ticker.stop()
