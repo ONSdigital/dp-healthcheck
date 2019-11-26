@@ -17,7 +17,7 @@ type Client struct {
 // the provided checker function and an optional rchttp.Clienter
 func NewClient(cli rchttp.Clienter, checker *Checker) (*Client, error) {
 	if cli == nil {
-		return nil, errors.New("expected clienter but non provided")
+		return nil, errors.New("expected clienter but none provided")
 	}
 
 	return &Client{
