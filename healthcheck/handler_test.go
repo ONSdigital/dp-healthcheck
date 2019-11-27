@@ -107,7 +107,6 @@ func TestHandler(t *testing.T) {
 		LastSuccess: testStartTime.Add(time.Duration(-30) * time.Minute),
 		LastFailure: testStartTime,
 	}
-	//
 	criticalCheck := Check{
 		Name:        "Some App 4",
 		Status:      StatusCritical,

@@ -25,7 +25,7 @@ func createTicker(interval time.Duration, client *Client) *ticker {
 	return &ticker
 }
 
-// // start creates a goroutine to read the given ticker channel (which spins off a check for that ticker)
+// start creates a goroutine to read the given ticker channel (which spins off a check for that ticker)
 func (ticker ticker) start(ctx context.Context) {
 	go func() {
 		defer close(ticker.closed)
