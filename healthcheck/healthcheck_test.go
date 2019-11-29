@@ -58,7 +58,7 @@ func TestCreate(t *testing.T) {
 		clients := []*Client{&client}
 		timeBeforeCreation := time.Now().UTC()
 		hc := Create(version, criticalTimeout, interval, clients)
-		hc.Start(ctx)
+		hc.Start(&ctx)
 		So(hc.Clients[0], ShouldEqual, &client)
 		So(hc.Version, ShouldEqual, "1.0.0")
 		So(hc.StartTime, ShouldHappenAfter, timeBeforeCreation)
@@ -86,7 +86,7 @@ func TestCreate(t *testing.T) {
 		}
 		clients := []*Client{&client}
 		hc := Create(version, criticalTimeout, interval, clients)
-		hc.Start(ctx)
+		hc.Start(&ctx)
 		Convey("After check function has run, ensure it has correctly stored the results", func() {
 			time.Sleep(2 * time.Millisecond)
 			So(hc.tickers[0].client.Check, ShouldBeNil)
@@ -107,7 +107,7 @@ func TestCreate(t *testing.T) {
 		client.Check = &healthyCheck1
 		clients := []*Client{&client}
 		hc := Create(version, criticalTimeout, interval, clients)
-		hc.Start(ctx)
+		hc.Start(&ctx)
 		Convey("After check function has run, the original check should not be overwritten by the failed check", func() {
 			time.Sleep(2 * time.Millisecond)
 			checkResponse := *hc.tickers[0].client.Check
@@ -138,7 +138,7 @@ func TestCreate(t *testing.T) {
 		clients := []*Client{&client1}
 		hc := Create(version, criticalTimeout, interval, clients)
 		hc.AddClient(&client2)
-		hc.Start(ctx)
+		hc.Start(&ctx)
 		Convey("After adding the second client there should be two timers on start", func() {
 			time.Sleep(2 * time.Millisecond)
 			So(len(hc.tickers), ShouldEqual, 2)
@@ -167,7 +167,7 @@ func TestCreate(t *testing.T) {
 		client1.Check = &healthyCheck1
 		clients := []*Client{&client1}
 		hc := Create(version, criticalTimeout, interval, clients)
-		hc.Start(ctx)
+		hc.Start(&ctx)
 		hc.AddClient(&client2)
 		Convey("After adding the second client after start there should be only 1 timer", func() {
 			time.Sleep(2 * time.Millisecond)
