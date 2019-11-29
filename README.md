@@ -13,10 +13,11 @@ Read the [Health Check Specification](https://github.com/ONSdigital/dp/blob/mast
 - An optional RCHTTP clienter; if none is provided one will be created
 - A function that implements the `Checker` interface
 3. Call `.Create()` passing in the following: 
-- Context
 - Versioning Information
 - Critical time duration; time to wait for dependent apps critical unhealthy status to make current app unhealthy- Time Interval to run health checks on dependencies
 - Clients; An array of clients created in the previous step
+4. Optionally call AddClient on the healthcheck to add additional clients, note this can only be done prior to 'Start' being called
+5 Call start on the healthcheck
 
 ### Configuration
 
