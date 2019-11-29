@@ -21,9 +21,24 @@ func TestCreate(t *testing.T) {
 		LastSuccess: timeAfterCreation,
 		LastFailure: timeAfterCreation.Add(time.Duration(-30) * time.Minute),
 	}
-	cfok := Checker(func(ctx *context.Context) (check *Check, err error) {
+
+	healthyCheck2 := Check{
+		Name:        "Some App 2",
+		Status:      StatusOK,
+		StatusCode:  200,
+		Message:     "Some message about app 2 here",
+		LastChecked: timeAfterCreation,
+		LastSuccess: timeAfterCreation,
+		LastFailure: timeAfterCreation.Add(time.Duration(-30) * time.Minute),
+	}
+
+	cfok1 := Checker(func(ctx *context.Context) (check *Check, err error) {
 		return &healthyCheck1, nil
 	})
+	cfok2 := Checker(func(ctx *context.Context) (check *Check, err error) {
+		return &healthyCheck2, nil
+	})
+
 	cfFail := Checker(func(ctx *context.Context) (*Check, error) {
 		err := errors.New("checker failed to run for some app 1")
 		return nil, err
@@ -34,18 +49,20 @@ func TestCreate(t *testing.T) {
 		version := "1.0.0"
 		criticalTimeout := 15 * time.Second
 		interval := 1 * time.Millisecond
-		checkerFunc := cfok
+		checkerFunc := cfok1
 		client := Client{
-			Clienter:   rchttp.NewClient(),
-			Checker:    &checkerFunc,
-			mutex: &sync.Mutex{},
+			Clienter: rchttp.NewClient(),
+			Checker:  &checkerFunc,
+			mutex:    &sync.Mutex{},
 		}
 		clients := []*Client{&client}
 		timeBeforeCreation := time.Now().UTC()
-		hc := Create(ctx, version, criticalTimeout, interval, clients)
+		hc := Create(version, criticalTimeout, interval, clients)
+		hc.Start(ctx)
 		So(hc.Clients[0], ShouldEqual, &client)
 		So(hc.Version, ShouldEqual, "1.0.0")
 		So(hc.StartTime, ShouldHappenAfter, timeBeforeCreation)
+		So(hc.StartTime, ShouldHappenBefore, time.Now().UTC())
 		So(hc.StartTime.Before(time.Now().UTC()), ShouldEqual, true)
 		So(hc.CriticalErrorTimeout, ShouldEqual, criticalTimeout)
 		So(len(hc.tickers), ShouldEqual, 1)
@@ -63,12 +80,13 @@ func TestCreate(t *testing.T) {
 		checkerFunc := cfFail
 		checkerFuncPointer := &checkerFunc
 		client := Client{
-			Clienter:   rchttp.NewClient(),
-			Checker:    checkerFuncPointer,
-			mutex: &sync.Mutex{},
+			Clienter: rchttp.NewClient(),
+			Checker:  checkerFuncPointer,
+			mutex:    &sync.Mutex{},
 		}
 		clients := []*Client{&client}
-		hc := Create(ctx, version, criticalTimeout, interval, clients)
+		hc := Create(version, criticalTimeout, interval, clients)
+		hc.Start(ctx)
 		Convey("After check function has run, ensure it has correctly stored the results", func() {
 			time.Sleep(2 * time.Millisecond)
 			So(hc.tickers[0].client.Check, ShouldBeNil)
@@ -82,17 +100,78 @@ func TestCreate(t *testing.T) {
 		checkerFunc := cfFail
 		checkerFuncPointer := &checkerFunc
 		client := Client{
-			Clienter:   rchttp.NewClient(),
-			Checker:    checkerFuncPointer,
-			mutex: &sync.Mutex{},
+			Clienter: rchttp.NewClient(),
+			Checker:  checkerFuncPointer,
+			mutex:    &sync.Mutex{},
 		}
 		client.Check = &healthyCheck1
 		clients := []*Client{&client}
-		hc := Create(ctx, version, criticalTimeout, interval, clients)
+		hc := Create(version, criticalTimeout, interval, clients)
+		hc.Start(ctx)
 		Convey("After check function has run, the original check should not be overwritten by the failed check", func() {
 			time.Sleep(2 * time.Millisecond)
 			checkResponse := *hc.tickers[0].client.Check
 			So(checkResponse, ShouldResemble, healthyCheck1)
+		})
+	})
+
+	Convey("Create a new Health Check given 1 client at creation and a second added before start is called", t, func() {
+		ctx := context.Background()
+		version := "1.0.0"
+		criticalTimeout := 15 * time.Second
+		interval := 1 * time.Millisecond
+		checkerFunc := cfok1
+		checkerFunc2 := cfok2
+		checkerFuncPointer := &checkerFunc
+		checkerFuncPointer2 := &checkerFunc2
+		client1 := Client{
+			Clienter: rchttp.NewClient(),
+			Checker:  checkerFuncPointer,
+			mutex:    &sync.Mutex{},
+		}
+		client2 := Client{
+			Clienter: rchttp.NewClient(),
+			Checker:  checkerFuncPointer2,
+			mutex:    &sync.Mutex{},
+		}
+		client1.Check = &healthyCheck1
+		clients := []*Client{&client1}
+		hc := Create(version, criticalTimeout, interval, clients)
+		hc.AddClient(&client2)
+		hc.Start(ctx)
+		Convey("After adding the second client there should be two timers on start", func() {
+			time.Sleep(2 * time.Millisecond)
+			So(len(hc.tickers), ShouldEqual, 2)
+		})
+	})
+
+	Convey("Create a new Health Check given 1 client at creation and a second added after start is called", t, func() {
+		ctx := context.Background()
+		version := "1.0.0"
+		criticalTimeout := 15 * time.Second
+		interval := 1 * time.Millisecond
+		checkerFunc := cfok1
+		checkerFunc2 := cfok2
+		checkerFuncPointer := &checkerFunc
+		checkerFuncPointer2 := &checkerFunc2
+		client1 := Client{
+			Clienter: rchttp.NewClient(),
+			Checker:  checkerFuncPointer,
+			mutex:    &sync.Mutex{},
+		}
+		client2 := Client{
+			Clienter: rchttp.NewClient(),
+			Checker:  checkerFuncPointer2,
+			mutex:    &sync.Mutex{},
+		}
+		client1.Check = &healthyCheck1
+		clients := []*Client{&client1}
+		hc := Create(version, criticalTimeout, interval, clients)
+		hc.Start(ctx)
+		hc.AddClient(&client2)
+		Convey("After adding the second client after start there should be only 1 timer", func() {
+			time.Sleep(2 * time.Millisecond)
+			So(len(hc.tickers), ShouldEqual, 1)
 		})
 	})
 }
