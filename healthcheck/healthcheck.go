@@ -2,8 +2,8 @@ package healthcheck
 
 import (
 	"context"
+	"errors"
 	"github.com/ONSdigital/go-ns/log"
-	"github.com/pkg/errors"
 	"time"
 )
 
@@ -12,7 +12,7 @@ type Checker func(*context.Context) (*Check, error)
 type Check struct {
 	Name        string    `json:"name"`
 	Status      string    `json:"status"`
-	StatusCode  int       `json:"s	tatus_code"`
+	StatusCode  int       `json:"status_code"`
 	Message     string    `json:"message"`
 	LastChecked time.Time `json:"last_checked"`
 	LastSuccess time.Time `json:"last_success"`
@@ -52,12 +52,11 @@ func Create(version string, criticalTimeout, interval time.Duration, clients []*
 
 // AddClient adds a provided client to the healthcheck
 func (hc *HealthCheck) AddClient(c *Client) {
-	log.Info("AddClient hit", log.Data{"client": c})
-	if hc.Started == false {
-		hc.Clients = append(hc.Clients, c)
-	} else {
-		log.Error(errors.New("unable to add new client, healthcheck has already stared"), nil)
+	if hc.Started {
+		log.Error(errors.New("unable to add new client, health check has already stared"), nil)
+		return
 	}
+	hc.Clients = append(hc.Clients, c)
 }
 
 // newTickers returns an array of tickers based on the number of clients in the clients parameter.
@@ -72,14 +71,13 @@ func newTickers(interval time.Duration, clients []*Client) []*ticker {
 
 // Start begins each ticker, this is used to run the health checks on dependent apps
 // takes argument context and should utilise contextWithCancel
-func (hc *HealthCheck) Start(ctx context.Context) {
+func (hc *HealthCheck) Start(ctx *context.Context) {
 	hc.Started = true
 	tickers := newTickers(hc.Interval, hc.Clients)
 	hc.tickers = tickers
 	hc.StartTime = time.Now().UTC()
-	log.Info("Creating tickers", log.Data{"tickers": hc.tickers})
 	for _, ticker := range hc.tickers {
-		ticker.start(ctx)
+		ticker.start(*ctx)
 	}
 }
 
