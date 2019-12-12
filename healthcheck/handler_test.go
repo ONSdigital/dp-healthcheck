@@ -3,14 +3,15 @@ package healthcheck
 import (
 	"context"
 	"encoding/json"
-	rchttp "github.com/ONSdigital/dp-rchttp"
-	"github.com/ONSdigital/go-ns/log"
-	. "github.com/smartystreets/goconvey/convey"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	rchttp "github.com/ONSdigital/dp-rchttp"
+	"github.com/ONSdigital/go-ns/log"
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 func createATestChecker(checkToReturn Check) *Checker {
@@ -38,7 +39,7 @@ func createHealthCheck(checks []Check, startTime time.Time, critErrTimeout time.
 		StartTime:                startTime,
 		CriticalErrorTimeout:     critErrTimeout,
 		TimeOfFirstCriticalError: firstCritErr,
-		tickers:                  nil,
+		Tickers:                  nil,
 	}
 	return hc
 }
@@ -172,7 +173,7 @@ func TestHandler(t *testing.T) {
 			StartTime:                testStartTime,
 			CriticalErrorTimeout:     10 * time.Minute,
 			TimeOfFirstCriticalError: testStartTime.Add(time.Duration(-30) * time.Minute),
-			tickers:                  nil,
+			Tickers:                  nil,
 		}
 		runHealthCheckHandlerAndTest(t, hc, StatusOK, testVersion, testStartTime, checks)
 	})

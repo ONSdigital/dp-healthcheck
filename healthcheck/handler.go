@@ -2,12 +2,14 @@ package healthcheck
 
 import (
 	"encoding/json"
-	"github.com/ONSdigital/go-ns/log"
-	"github.com/pkg/errors"
 	"net/http"
 	"time"
+
+	"github.com/ONSdigital/go-ns/log"
+	"github.com/pkg/errors"
 )
 
+// A list of possible health check status codes
 const (
 	StatusOK       = "OK"
 	StatusCritical = "CRITICAL"

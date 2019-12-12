@@ -3,11 +3,12 @@ package healthcheck
 import (
 	"context"
 	"errors"
-	rchttp "github.com/ONSdigital/dp-rchttp"
-	. "github.com/smartystreets/goconvey/convey"
 	"sync"
 	"testing"
 	"time"
+
+	rchttp "github.com/ONSdigital/dp-rchttp"
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestCreate(t *testing.T) {
@@ -65,10 +66,10 @@ func TestCreate(t *testing.T) {
 		So(hc.StartTime, ShouldHappenBefore, time.Now().UTC())
 		So(hc.StartTime.Before(time.Now().UTC()), ShouldEqual, true)
 		So(hc.CriticalErrorTimeout, ShouldEqual, criticalTimeout)
-		So(len(hc.tickers), ShouldEqual, 1)
+		So(len(hc.Tickers), ShouldEqual, 1)
 		Convey("After check function has run, ensure it has correctly stored the results", func() {
 			time.Sleep(2 * time.Millisecond)
-			checkResponse := *hc.tickers[0].client.Check
+			checkResponse := *hc.Tickers[0].client.Check
 			So(checkResponse, ShouldResemble, healthyCheck1)
 		})
 	})
@@ -89,7 +90,7 @@ func TestCreate(t *testing.T) {
 		hc.Start(&ctx)
 		Convey("After check function has run, ensure it has correctly stored the results", func() {
 			time.Sleep(2 * time.Millisecond)
-			So(hc.tickers[0].client.Check, ShouldBeNil)
+			So(hc.Tickers[0].client.Check, ShouldBeNil)
 		})
 	})
 	Convey("Create a new Health Check given 1 successful check followed by a broken run check", t, func() {
@@ -110,7 +111,7 @@ func TestCreate(t *testing.T) {
 		hc.Start(&ctx)
 		Convey("After check function has run, the original check should not be overwritten by the failed check", func() {
 			time.Sleep(2 * time.Millisecond)
-			checkResponse := *hc.tickers[0].client.Check
+			checkResponse := *hc.Tickers[0].client.Check
 			So(checkResponse, ShouldResemble, healthyCheck1)
 		})
 	})
@@ -141,7 +142,7 @@ func TestCreate(t *testing.T) {
 		hc.Start(&ctx)
 		Convey("After adding the second client there should be two timers on start", func() {
 			time.Sleep(2 * time.Millisecond)
-			So(len(hc.tickers), ShouldEqual, 2)
+			So(len(hc.Tickers), ShouldEqual, 2)
 		})
 	})
 
@@ -171,7 +172,7 @@ func TestCreate(t *testing.T) {
 		hc.AddClient(&client2)
 		Convey("After adding the second client after start there should be only 1 timer", func() {
 			time.Sleep(2 * time.Millisecond)
-			So(len(hc.tickers), ShouldEqual, 1)
+			So(len(hc.Tickers), ShouldEqual, 1)
 		})
 	})
 }
