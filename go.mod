@@ -1,6 +1,6 @@
 module github.com/ONSdigital/dp-healthcheck
 
-go 1.13
+go 1.12
 
 require (
 	github.com/ONSdigital/dp-rchttp v0.0.0-20190919143000-bb5699e6fd59
