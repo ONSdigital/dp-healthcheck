@@ -10,7 +10,7 @@ import (
 	"time"
 
 	rchttp "github.com/ONSdigital/dp-rchttp"
-	"github.com/ONSdigital/go-ns/log"
+	"github.com/ONSdigital/log.go/log"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -62,12 +62,12 @@ func runHealthCheckHandlerAndTest(t *testing.T, hc HealthCheck, desiredStatus, t
 	handler.ServeHTTP(w, req)
 	b, err := ioutil.ReadAll(w.Body)
 	if err != nil {
-		log.Error(err, nil)
+		log.Event(nil, "unable to read request body", log.Error(err))
 	}
 	var healthCheck HealthCheck
 	err = json.Unmarshal(b, &healthCheck)
 	if err != nil {
-		log.Error(err, nil)
+		log.Event(nil, "unable to unmarshal bytes into healthcheck", log.Error(err))
 	}
 	So(w.Code, ShouldEqual, 200)
 	So(healthCheck.Status, ShouldEqual, desiredStatus)

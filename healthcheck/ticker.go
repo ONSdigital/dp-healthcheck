@@ -2,8 +2,9 @@ package healthcheck
 
 import (
 	"context"
-	"github.com/ONSdigital/go-ns/log"
 	"time"
+
+	"github.com/ONSdigital/log.go/log"
 )
 
 type ticker struct {
@@ -49,9 +50,9 @@ func (ticker ticker) runCheck(ctx context.Context) {
 	if err != nil {
 		// If first check has failed then there is no way to know which app it was attempting to check
 		if ticker.client.Check != nil {
-			log.Error(err, log.Data{"external_service": ticker.client.Check.Name})
+			log.Event(nil, "failed", log.Error(err), log.Data{"external_service": ticker.client.Check.Name})
 		} else {
-			log.Error(err, nil)
+			log.Event(nil, "failed", log.Error(err))
 		}
 		return
 	}

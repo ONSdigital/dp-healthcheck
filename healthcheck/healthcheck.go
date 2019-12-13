@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/ONSdigital/go-ns/log"
+	"github.com/ONSdigital/log.go/log"
 )
 
 // Checker represents the interface all checker functions abide to
@@ -57,7 +57,7 @@ func Create(version string, criticalTimeout, interval time.Duration, clients []*
 // AddClient adds a provided client to the healthcheck
 func (hc *HealthCheck) AddClient(c *Client) {
 	if hc.Started {
-		log.Error(errors.New("unable to add new client, health check has already stared"), nil)
+		log.Event(nil, "health check has already stared", log.Error(errors.New("unable to add new client, health check has already started")))
 		return
 	}
 	hc.Clients = append(hc.Clients, c)
