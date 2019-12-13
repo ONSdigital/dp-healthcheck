@@ -3,14 +3,15 @@ package healthcheck
 import (
 	"context"
 	"encoding/json"
-	rchttp "github.com/ONSdigital/dp-rchttp"
-	"github.com/ONSdigital/go-ns/log"
-	. "github.com/smartystreets/goconvey/convey"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	rchttp "github.com/ONSdigital/dp-rchttp"
+	"github.com/ONSdigital/log.go/log"
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 func createATestChecker(checkToReturn Check) *Checker {
@@ -38,7 +39,7 @@ func createHealthCheck(checks []Check, startTime time.Time, critErrTimeout time.
 		StartTime:                startTime,
 		CriticalErrorTimeout:     critErrTimeout,
 		TimeOfFirstCriticalError: firstCritErr,
-		tickers:                  nil,
+		Tickers:                  nil,
 	}
 	return hc
 }
@@ -61,12 +62,12 @@ func runHealthCheckHandlerAndTest(t *testing.T, hc HealthCheck, desiredStatus, t
 	handler.ServeHTTP(w, req)
 	b, err := ioutil.ReadAll(w.Body)
 	if err != nil {
-		log.Error(err, nil)
+		log.Event(nil, "unable to read request body", log.Error(err))
 	}
 	var healthCheck HealthCheck
 	err = json.Unmarshal(b, &healthCheck)
 	if err != nil {
-		log.Error(err, nil)
+		log.Event(nil, "unable to unmarshal bytes into healthcheck", log.Error(err))
 	}
 	So(w.Code, ShouldEqual, 200)
 	So(healthCheck.Status, ShouldEqual, desiredStatus)
@@ -98,8 +99,16 @@ func TestHandler(t *testing.T) {
 		LastSuccess: testStartTime,
 		LastFailure: testStartTime.Add(time.Duration(-30) * time.Minute),
 	}
-	unhealthyCheck := Check{
+	healthyCheck3 := Check{
 		Name:        "Some App 3",
+		Status:      StatusOK,
+		Message:     "Some message about app 2 here",
+		LastChecked: testStartTime,
+		LastSuccess: testStartTime,
+		LastFailure: testStartTime.Add(time.Duration(-30) * time.Minute),
+	}
+	unhealthyCheck := Check{
+		Name:        "Some App 4",
 		Status:      StatusWarning,
 		StatusCode:  429,
 		Message:     "Something has been unhealthy for past 30 minutes",
@@ -108,7 +117,7 @@ func TestHandler(t *testing.T) {
 		LastFailure: testStartTime,
 	}
 	criticalCheck := Check{
-		Name:        "Some App 4",
+		Name:        "Some App 5",
 		Status:      StatusCritical,
 		StatusCode:  500,
 		Message:     "Something has been critical for the past 30 minutes",
@@ -117,7 +126,7 @@ func TestHandler(t *testing.T) {
 		LastFailure: testStartTime,
 	}
 	freshCriticalCheck := Check{
-		Name:        "Some App 5",
+		Name:        "Some App 6",
 		Status:      StatusCritical,
 		StatusCode:  500,
 		Message:     "Something has been critical for the past 30 minutes",
@@ -127,7 +136,7 @@ func TestHandler(t *testing.T) {
 	}
 
 	Convey("Given a complete Healthy set of checks the app should report back as healthy", t, func() {
-		checks := []Check{healthyCheck1, healthyCheck2}
+		checks := []Check{healthyCheck1, healthyCheck2, healthyCheck3}
 		hc := createHealthCheck(checks, testStartTime, 10*time.Minute, testStartTime.Add(time.Duration(-30)*time.Minute), true)
 		runHealthCheckHandlerAndTest(t, hc, StatusOK, testVersion, testStartTime, checks)
 	})
@@ -172,7 +181,7 @@ func TestHandler(t *testing.T) {
 			StartTime:                testStartTime,
 			CriticalErrorTimeout:     10 * time.Minute,
 			TimeOfFirstCriticalError: testStartTime.Add(time.Duration(-30) * time.Minute),
-			tickers:                  nil,
+			Tickers:                  nil,
 		}
 		runHealthCheckHandlerAndTest(t, hc, StatusOK, testVersion, testStartTime, checks)
 	})

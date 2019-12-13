@@ -2,9 +2,10 @@ package healthcheck
 
 import (
 	"context"
+	"testing"
+
 	rchttp "github.com/ONSdigital/dp-rchttp"
 	. "github.com/smartystreets/goconvey/convey"
-	"testing"
 )
 
 func TestCreateNew(t *testing.T) {

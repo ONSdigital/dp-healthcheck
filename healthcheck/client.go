@@ -2,10 +2,12 @@ package healthcheck
 
 import (
 	"errors"
-	rchttp "github.com/ONSdigital/dp-rchttp"
 	"sync"
+
+	rchttp "github.com/ONSdigital/dp-rchttp"
 )
 
+// Client represents a healthcheck client
 type Client struct {
 	Clienter rchttp.Clienter
 	Check    *Check

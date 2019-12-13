@@ -3,11 +3,12 @@ package healthcheck
 import (
 	"context"
 	"errors"
-	rchttp "github.com/ONSdigital/dp-rchttp"
-	. "github.com/smartystreets/goconvey/convey"
 	"sync"
 	"testing"
 	"time"
+
+	rchttp "github.com/ONSdigital/dp-rchttp"
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestCreate(t *testing.T) {
@@ -32,11 +33,23 @@ func TestCreate(t *testing.T) {
 		LastFailure: timeAfterCreation.Add(time.Duration(-30) * time.Minute),
 	}
 
+	healthyCheck3 := Check{
+		Name:        "Some App 3",
+		Status:      StatusOK,
+		Message:     "Some message about app 3 here",
+		LastChecked: timeAfterCreation,
+		LastSuccess: timeAfterCreation,
+		LastFailure: timeAfterCreation.Add(time.Duration(-30) * time.Minute),
+	}
+
 	cfok1 := Checker(func(ctx *context.Context) (check *Check, err error) {
 		return &healthyCheck1, nil
 	})
 	cfok2 := Checker(func(ctx *context.Context) (check *Check, err error) {
 		return &healthyCheck2, nil
+	})
+	cfok3 := Checker(func(ctx *context.Context) (check *Check, err error) {
+		return &healthyCheck3, nil
 	})
 
 	cfFail := Checker(func(ctx *context.Context) (*Check, error) {
@@ -44,7 +57,7 @@ func TestCreate(t *testing.T) {
 		return nil, err
 	})
 
-	Convey("Create a new Health Check given one good working check function to run", t, func() {
+	Convey("Create a new Health Check given one good working check function to run with status code", t, func() {
 		ctx := context.Background()
 		version := "1.0.0"
 		criticalTimeout := 15 * time.Second
@@ -65,10 +78,67 @@ func TestCreate(t *testing.T) {
 		So(hc.StartTime, ShouldHappenBefore, time.Now().UTC())
 		So(hc.StartTime.Before(time.Now().UTC()), ShouldEqual, true)
 		So(hc.CriticalErrorTimeout, ShouldEqual, criticalTimeout)
-		So(len(hc.tickers), ShouldEqual, 1)
+		So(len(hc.Tickers), ShouldEqual, 1)
 		Convey("After check function has run, ensure it has correctly stored the results", func() {
 			time.Sleep(2 * time.Millisecond)
-			checkResponse := *hc.tickers[0].client.Check
+			checkResponse := *hc.Tickers[0].client.Check
+			So(checkResponse, ShouldResemble, healthyCheck1)
+		})
+	})
+
+	Convey("Create a new Health Check given one good working check function to run (with status code)", t, func() {
+		ctx := context.Background()
+		version := "1.0.0"
+		criticalTimeout := 15 * time.Second
+		interval := 1 * time.Millisecond
+		checkerFunc := cfok3
+		client := Client{
+			Clienter: rchttp.NewClient(),
+			Checker:  &checkerFunc,
+			mutex:    &sync.Mutex{},
+		}
+		clients := []*Client{&client}
+		timeBeforeCreation := time.Now().UTC()
+		hc := Create(version, criticalTimeout, interval, clients)
+		hc.Start(&ctx)
+		So(hc.Clients[0], ShouldEqual, &client)
+		So(hc.Version, ShouldEqual, "1.0.0")
+		So(hc.StartTime, ShouldHappenAfter, timeBeforeCreation)
+		So(hc.StartTime, ShouldHappenBefore, time.Now().UTC())
+		So(hc.StartTime.Before(time.Now().UTC()), ShouldEqual, true)
+		So(hc.CriticalErrorTimeout, ShouldEqual, criticalTimeout)
+		So(len(hc.Tickers), ShouldEqual, 1)
+		Convey("After check function has run, ensure it has correctly stored the results", func() {
+			time.Sleep(2 * time.Millisecond)
+			checkResponse := *hc.Tickers[0].client.Check
+			So(checkResponse, ShouldResemble, healthyCheck3)
+		})
+	})
+	Convey("Create a new Health Check given one good working check function to run (without status code)", t, func() {
+		ctx := context.Background()
+		version := "1.0.0"
+		criticalTimeout := 15 * time.Second
+		interval := 1 * time.Millisecond
+		checkerFunc := cfok1
+		client := Client{
+			Clienter: rchttp.NewClient(),
+			Checker:  &checkerFunc,
+			mutex:    &sync.Mutex{},
+		}
+		clients := []*Client{&client}
+		timeBeforeCreation := time.Now().UTC()
+		hc := Create(version, criticalTimeout, interval, clients)
+		hc.Start(&ctx)
+		So(hc.Clients[0], ShouldEqual, &client)
+		So(hc.Version, ShouldEqual, "1.0.0")
+		So(hc.StartTime, ShouldHappenAfter, timeBeforeCreation)
+		So(hc.StartTime, ShouldHappenBefore, time.Now().UTC())
+		So(hc.StartTime.Before(time.Now().UTC()), ShouldEqual, true)
+		So(hc.CriticalErrorTimeout, ShouldEqual, criticalTimeout)
+		So(len(hc.Tickers), ShouldEqual, 1)
+		Convey("After check function has run, ensure it has correctly stored the results", func() {
+			time.Sleep(2 * time.Millisecond)
+			checkResponse := *hc.Tickers[0].client.Check
 			So(checkResponse, ShouldResemble, healthyCheck1)
 		})
 	})
@@ -89,7 +159,7 @@ func TestCreate(t *testing.T) {
 		hc.Start(&ctx)
 		Convey("After check function has run, ensure it has correctly stored the results", func() {
 			time.Sleep(2 * time.Millisecond)
-			So(hc.tickers[0].client.Check, ShouldBeNil)
+			So(hc.Tickers[0].client.Check, ShouldBeNil)
 		})
 	})
 	Convey("Create a new Health Check given 1 successful check followed by a broken run check", t, func() {
@@ -110,7 +180,7 @@ func TestCreate(t *testing.T) {
 		hc.Start(&ctx)
 		Convey("After check function has run, the original check should not be overwritten by the failed check", func() {
 			time.Sleep(2 * time.Millisecond)
-			checkResponse := *hc.tickers[0].client.Check
+			checkResponse := *hc.Tickers[0].client.Check
 			So(checkResponse, ShouldResemble, healthyCheck1)
 		})
 	})
@@ -141,7 +211,7 @@ func TestCreate(t *testing.T) {
 		hc.Start(&ctx)
 		Convey("After adding the second client there should be two timers on start", func() {
 			time.Sleep(2 * time.Millisecond)
-			So(len(hc.tickers), ShouldEqual, 2)
+			So(len(hc.Tickers), ShouldEqual, 2)
 		})
 	})
 
@@ -171,7 +241,7 @@ func TestCreate(t *testing.T) {
 		hc.AddClient(&client2)
 		Convey("After adding the second client after start there should be only 1 timer", func() {
 			time.Sleep(2 * time.Millisecond)
-			So(len(hc.tickers), ShouldEqual, 1)
+			So(len(hc.Tickers), ShouldEqual, 1)
 		})
 	})
 }

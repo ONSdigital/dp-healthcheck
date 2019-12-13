@@ -3,22 +3,26 @@ package healthcheck
 import (
 	"context"
 	"errors"
-	"github.com/ONSdigital/go-ns/log"
 	"time"
+
+	"github.com/ONSdigital/log.go/log"
 )
 
+// Checker represents the interface all checker functions abide to
 type Checker func(*context.Context) (*Check, error)
 
+// Check represents the structure of the details of a single check
 type Check struct {
 	Name        string    `json:"name"`
 	Status      string    `json:"status"`
-	StatusCode  int       `json:"status_code"`
+	StatusCode  int       `json:"status_code,omitempty"`
 	Message     string    `json:"message"`
 	LastChecked time.Time `json:"last_checked"`
 	LastSuccess time.Time `json:"last_success"`
 	LastFailure time.Time `json:"last_failure"`
 }
 
+// HealthCheck represents the structure of the current health of a service/app
 type HealthCheck struct {
 	Status                   string        `json:"status"`
 	Version                  string        `json:"version"`
@@ -30,7 +34,7 @@ type HealthCheck struct {
 	Clients                  []*Client     `json:"-"`
 	CriticalErrorTimeout     time.Duration `json:"-"`
 	TimeOfFirstCriticalError time.Time     `json:"-"`
-	tickers                  []*ticker     `json:"-"`
+	Tickers                  []*ticker     `json:"-"`
 }
 
 // Create returns a new instantiated HealthCheck object. Caller to provide:
@@ -53,7 +57,7 @@ func Create(version string, criticalTimeout, interval time.Duration, clients []*
 // AddClient adds a provided client to the healthcheck
 func (hc *HealthCheck) AddClient(c *Client) {
 	if hc.Started {
-		log.Error(errors.New("unable to add new client, health check has already stared"), nil)
+		log.Event(nil, "health check has already stared", log.Error(errors.New("unable to add new client, health check has already started")))
 		return
 	}
 	hc.Clients = append(hc.Clients, c)
@@ -74,16 +78,16 @@ func newTickers(interval time.Duration, clients []*Client) []*ticker {
 func (hc *HealthCheck) Start(ctx *context.Context) {
 	hc.Started = true
 	tickers := newTickers(hc.Interval, hc.Clients)
-	hc.tickers = tickers
+	hc.Tickers = tickers
 	hc.StartTime = time.Now().UTC()
-	for _, ticker := range hc.tickers {
+	for _, ticker := range hc.Tickers {
 		ticker.start(*ctx)
 	}
 }
 
 // Stop will cancel all tickers and thus stop all health checks
 func (hc *HealthCheck) Stop() {
-	for _, ticker := range hc.tickers {
+	for _, ticker := range hc.Tickers {
 		ticker.stop()
 	}
 }

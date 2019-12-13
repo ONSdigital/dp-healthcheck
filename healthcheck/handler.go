@@ -1,13 +1,15 @@
 package healthcheck
 
 import (
+	"context"
 	"encoding/json"
-	"github.com/ONSdigital/go-ns/log"
-	"github.com/pkg/errors"
 	"net/http"
 	"time"
+
+	"github.com/ONSdigital/log.go/log"
 )
 
+// A list of possible health check status codes
 const (
 	StatusOK       = "OK"
 	StatusCritical = "CRITICAL"
@@ -27,19 +29,19 @@ func (hc HealthCheck) Handler(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	hc.Status = hc.getStatus()
+	hc.Status = hc.getStatus(ctx)
 	hc.Uptime = now.Sub(hc.StartTime)
 	hc.Checks = checks
 
 	b, err := json.Marshal(hc)
 	if err != nil {
-		log.ErrorCtx(ctx, errors.Wrap(err, "failed to marshal json"), log.Data{"error": err, "health_check_response": hc})
+		log.Event(ctx, "failed to marshal json", log.Error(err), log.Data{"health_check_response": hc})
 		return
 	}
 
 	_, err = w.Write(b)
 	if err != nil {
-		log.ErrorCtx(ctx, errors.Wrap(err, "failed to write bytes for http response"), nil)
+		log.Event(ctx, "failed to write bytes for http response", log.Error(err))
 		return
 	}
 }
@@ -55,9 +57,9 @@ func (hc HealthCheck) isAppStartingUp() bool {
 }
 
 // getStatus returns a status as string as to the overall current apps health based on its dependent apps health
-func (hc HealthCheck) getStatus() string {
+func (hc HealthCheck) getStatus(ctx context.Context) string {
 	if hc.isAppStartingUp() {
-		log.Info("a dependency is still starting up", nil)
+		log.Event(ctx, "a dependency is still starting up")
 		return StatusWarning
 	}
 	return hc.isAppHealthy()
