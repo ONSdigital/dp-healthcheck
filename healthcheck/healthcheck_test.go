@@ -81,7 +81,9 @@ func TestCreate(t *testing.T) {
 		So(len(hc.Tickers), ShouldEqual, 1)
 		Convey("After check function has run, ensure it has correctly stored the results", func() {
 			time.Sleep(2 * time.Millisecond)
+			hc.Tickers[0].client.mutex.Lock()
 			checkResponse := *hc.Tickers[0].client.Check
+			hc.Tickers[0].client.mutex.Unlock()
 			So(checkResponse, ShouldResemble, healthyCheck1)
 		})
 	})
@@ -110,7 +112,9 @@ func TestCreate(t *testing.T) {
 		So(len(hc.Tickers), ShouldEqual, 1)
 		Convey("After check function has run, ensure it has correctly stored the results", func() {
 			time.Sleep(2 * time.Millisecond)
+			hc.Tickers[0].client.mutex.Lock()
 			checkResponse := *hc.Tickers[0].client.Check
+			hc.Tickers[0].client.mutex.Unlock()
 			So(checkResponse, ShouldResemble, healthyCheck3)
 		})
 	})
@@ -138,7 +142,9 @@ func TestCreate(t *testing.T) {
 		So(len(hc.Tickers), ShouldEqual, 1)
 		Convey("After check function has run, ensure it has correctly stored the results", func() {
 			time.Sleep(2 * time.Millisecond)
+			hc.Tickers[0].client.mutex.Lock()
 			checkResponse := *hc.Tickers[0].client.Check
+			hc.Tickers[0].client.mutex.Unlock()
 			So(checkResponse, ShouldResemble, healthyCheck1)
 		})
 	})
@@ -180,7 +186,9 @@ func TestCreate(t *testing.T) {
 		hc.Start(&ctx)
 		Convey("After check function has run, the original check should not be overwritten by the failed check", func() {
 			time.Sleep(2 * time.Millisecond)
+			hc.Tickers[0].client.mutex.Lock()
 			checkResponse := *hc.Tickers[0].client.Check
+			hc.Tickers[0].client.mutex.Unlock()
 			So(checkResponse, ShouldResemble, healthyCheck1)
 		})
 	})
