@@ -9,9 +9,9 @@ import (
 )
 
 // Checker represents the interface all checker functions abide to
-type Checker func(*context.Context) (*Check, error)
+type Checker func(context.Context) (*Check, error)
 
-// Check represents the structure of the details of a single check
+// Check represents the details of a single checked dependency
 type Check struct {
 	Name        string    `json:"name"`
 	Status      string    `json:"status"`
@@ -55,12 +55,14 @@ func Create(version string, criticalTimeout, interval time.Duration, clients []*
 }
 
 // AddClient adds a provided client to the healthcheck
-func (hc *HealthCheck) AddClient(c *Client) {
+func (hc *HealthCheck) AddClient(c *Client) (err error) {
 	if hc.Started {
-		log.Event(nil, "health check has already stared", log.Error(errors.New("unable to add new client, health check has already started")))
+		err = errors.New("unable to add new client, health check has already started")
+		log.Event(nil, "health check has already started", log.Error(err))
 		return
 	}
 	hc.Clients = append(hc.Clients, c)
+	return
 }
 
 // newTickers returns an array of tickers based on the number of clients in the clients parameter.
@@ -75,13 +77,12 @@ func newTickers(interval time.Duration, clients []*Client) []*ticker {
 
 // Start begins each ticker, this is used to run the health checks on dependent apps
 // takes argument context and should utilise contextWithCancel
-func (hc *HealthCheck) Start(ctx *context.Context) {
+func (hc *HealthCheck) Start(ctx context.Context) {
 	hc.Started = true
-	tickers := newTickers(hc.Interval, hc.Clients)
-	hc.Tickers = tickers
+	hc.Tickers = newTickers(hc.Interval, hc.Clients)
 	hc.StartTime = time.Now().UTC()
 	for _, ticker := range hc.Tickers {
-		ticker.start(*ctx)
+		ticker.start(ctx)
 	}
 }
 

@@ -16,7 +16,7 @@ type Client struct {
 }
 
 // NewClient returns a pointer to a new instantiated Client with
-// the provided checker function and an optional rchttp.Clienter
+// the provided checker function and an rchttp.Clienter
 func NewClient(cli rchttp.Clienter, checker *Checker) (*Client, error) {
 	if cli == nil {
 		return nil, errors.New("expected clienter but none provided")

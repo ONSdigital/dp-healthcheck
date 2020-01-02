@@ -5,18 +5,21 @@ import (
 	"time"
 )
 
-const ()
+const jitterFactor = 0.05
 
-// calcIntervalWithJitter returns a new duration based on a provided interval and a jitter percentage of 5%
+// init seeds rand at app startup
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
+
+// calcIntervalWithJitter returns a new duration based on a provided interval and a jitter of ±jitterFactor
 func calcIntervalWithJitter(interval time.Duration) time.Duration {
-	const jitterAmount = 0.05
-	upperJitterThreshold := int(float64(interval) * jitterAmount)
-	lowerJitterThreshold := -1 * upperJitterThreshold
-	jitterToApply := time.Duration(random(lowerJitterThreshold, upperJitterThreshold))
+	upperJitterThreshold := int64(float64(interval) * jitterFactor)
+	jitterToApply := time.Duration(random(-upperJitterThreshold, upperJitterThreshold))
 	return interval + jitterToApply
 }
 
 // random creates a random integer between min and max
-func random(min, max int) int {
-	return rand.Intn(max-min) + min
+func random(min, max int64) int64 {
+	return min + rand.Int63n(max-min)
 }

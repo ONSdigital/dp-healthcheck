@@ -9,22 +9,31 @@ import (
 )
 
 func TestCreateNew(t *testing.T) {
-	checkerFunc := Checker(func(ctx *context.Context) (check *Check, err error) {
-		return
-	})
+	var (
+		checkerFunc = Checker(func(ctx context.Context) (check *Check, err error) {
+			return
+		})
+		cli      *Client
+		err      error
+		clienter = rchttp.NewClient()
+	)
 	Convey("Create a new Client", t, func() {
-		checkerFuncPointer := &checkerFunc
-		clienter := rchttp.NewClient()
-		cli, _ := NewClient(clienter, checkerFuncPointer)
-		So(cli.Checker, ShouldEqual, &checkerFunc)
+		cli, err = NewClient(clienter, &checkerFunc)
+		So(err, ShouldBeNil)
+		So(cli.Checker, ShouldPointTo, &checkerFunc)
 		So(cli.mutex, ShouldNotBeNil)
 		So(cli.Clienter, ShouldNotBeNil)
 		So(cli.Check, ShouldBeNil)
 	})
+	Convey("A second new client shares the right values", t, func() {
+		cli2, err := NewClient(clienter, &checkerFunc)
+		So(err, ShouldBeNil)
+		So(cli2.Checker, ShouldPointTo, cli.Checker)
+		So(cli2.mutex, ShouldNotPointTo, cli.mutex)
+	})
 	Convey("Fail to create a new client as clienter given is nil", t, func() {
-		checkerFuncPointer := &checkerFunc
-		cli, err := NewClient(nil, checkerFuncPointer)
-		So(cli, ShouldBeNil)
+		cli3, err := NewClient(nil, &checkerFunc)
+		So(cli3, ShouldBeNil)
 		So(err, ShouldNotBeNil)
 	})
 
