@@ -14,8 +14,9 @@ func init() {
 
 // calcIntervalWithJitter returns a new duration based on a provided interval and a jitter of ±jitterFactor
 func calcIntervalWithJitter(interval time.Duration) time.Duration {
-	upperJitterThreshold := int64(float64(interval) * jitterFactor)
-	jitterToApply := time.Duration(random(-upperJitterThreshold, upperJitterThreshold))
+	maxJitter := int64(float64(interval) * jitterFactor)
+	minJitter := -maxJitter
+	jitterToApply := time.Duration(random(minJitter, maxJitter))
 	return interval + jitterToApply
 }
 
