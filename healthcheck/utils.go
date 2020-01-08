@@ -12,9 +12,13 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
+func getMaxJitter(interval time.Duration) int64 {
+	return int64(float64(interval) * jitterFactor)
+}
+
 // calcIntervalWithJitter returns a new duration based on a provided interval and a jitter of ±jitterFactor
 func calcIntervalWithJitter(interval time.Duration) time.Duration {
-	maxJitter := int64(float64(interval) * jitterFactor)
+	maxJitter := getMaxJitter(interval)
 	minJitter := -maxJitter
 	jitterToApply := time.Duration(random(minJitter, maxJitter))
 	return interval + jitterToApply
