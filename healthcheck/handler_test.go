@@ -14,7 +14,13 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-const testVersion = "1.0.0"
+var testVersion = VersionObj{
+	BuildTime:       time.Unix(0, 0),
+	GitCommit:       "d6cd1e2bd19e03a81132a23b2025920577f84e37",
+	Language:        "go",
+	LanguageVersion: "1.12",
+	Version:         "1.0.0",
+}
 
 func createATestChecker(checkToReturn Check) *Checker {
 	checkerFunc := Checker(func(ctx context.Context) (check *Check, err error) {
@@ -53,7 +59,7 @@ func createClientsSlice(checks []Check, pretendHistory bool) []*Client {
 	return clients
 }
 
-func runHealthCheckHandlerAndTest(t *testing.T, hc HealthCheck, desiredStatus, testVersion string, testStartTime time.Time, checks []Check) {
+func runHealthCheckHandlerAndTest(t *testing.T, hc HealthCheck, desiredStatus string, testVersion VersionObj, testStartTime time.Time, checks []Check) {
 	req, err := http.NewRequest("GET", "/healthcheck", nil)
 	if err != nil {
 		t.Fail()
@@ -74,7 +80,7 @@ func runHealthCheckHandlerAndTest(t *testing.T, hc HealthCheck, desiredStatus, t
 	}
 	So(w.Code, ShouldEqual, http.StatusOK)
 	So(healthCheck.Status, ShouldEqual, desiredStatus)
-	So(healthCheck.Version, ShouldEqual, testVersion)
+	So(healthCheck.Version, ShouldResemble, testVersion)
 	So(healthCheck.StartTime, ShouldEqual, testStartTime)
 	So(healthCheck.Checks, ShouldResemble, checks)
 	So(healthCheck.Uptime, ShouldNotBeNil)
@@ -83,58 +89,59 @@ func runHealthCheckHandlerAndTest(t *testing.T, hc HealthCheck, desiredStatus, t
 
 func TestHandler(t *testing.T) {
 	testStartTime := time.Now().UTC().Add(-20 * time.Minute)
+	priorTestTime := testStartTime.Add(-30 * time.Minute)
 	healthyCheck1 := Check{
 		Name:        "Some App 1",
 		Status:      StatusOK,
 		StatusCode:  http.StatusOK,
 		Message:     "Some message about app 1 here",
-		LastChecked: testStartTime,
-		LastSuccess: testStartTime,
-		LastFailure: testStartTime.Add(-30 * time.Minute),
+		LastChecked: &testStartTime,
+		LastSuccess: &testStartTime,
+		LastFailure: &priorTestTime,
 	}
 	healthyCheck2 := Check{
 		Name:        "Some App 2",
 		Status:      StatusOK,
 		StatusCode:  http.StatusOK,
 		Message:     "Some message about app 2 here",
-		LastChecked: testStartTime,
-		LastSuccess: testStartTime,
-		LastFailure: testStartTime.Add(-30 * time.Minute),
+		LastChecked: &testStartTime,
+		LastSuccess: &testStartTime,
+		LastFailure: &priorTestTime,
 	}
 	healthyCheck3 := Check{
 		Name:        "Some App 3",
 		Status:      StatusOK,
 		Message:     "Some message about app 2 here",
-		LastChecked: testStartTime,
-		LastSuccess: testStartTime,
-		LastFailure: testStartTime.Add(-30 * time.Minute),
+		LastChecked: &testStartTime,
+		LastSuccess: &testStartTime,
+		LastFailure: &priorTestTime,
 	}
 	unhealthyCheck := Check{
 		Name:        "Some App 4",
 		Status:      StatusWarning,
 		StatusCode:  http.StatusTooManyRequests,
 		Message:     "Something has been unhealthy for past 30 minutes",
-		LastChecked: testStartTime,
-		LastSuccess: testStartTime.Add(-30 * time.Minute),
-		LastFailure: testStartTime,
+		LastChecked: &testStartTime,
+		LastSuccess: &priorTestTime,
+		LastFailure: &testStartTime,
 	}
 	criticalCheck := Check{
 		Name:        "Some App 5",
 		Status:      StatusCritical,
 		StatusCode:  http.StatusInternalServerError,
 		Message:     "Something has been critical for the past 30 minutes",
-		LastChecked: testStartTime,
-		LastSuccess: testStartTime.Add(-30 * time.Minute),
-		LastFailure: testStartTime,
+		LastChecked: &testStartTime,
+		LastSuccess: &priorTestTime,
+		LastFailure: &testStartTime,
 	}
 	freshCriticalCheck := Check{
 		Name:        "Some App 6",
 		Status:      StatusCritical,
 		StatusCode:  http.StatusInternalServerError,
 		Message:     "Something has been critical for the past 30 minutes",
-		LastChecked: testStartTime,
-		LastSuccess: testStartTime,
-		LastFailure: testStartTime.Add(-30 * time.Minute),
+		LastChecked: &testStartTime,
+		LastSuccess: &testStartTime,
+		LastFailure: &priorTestTime,
 	}
 
 	Convey("Given a complete Healthy set of checks the app should report back as healthy", t, func() {

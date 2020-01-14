@@ -11,20 +11,28 @@ import (
 )
 
 const (
-	version         = "1.0.0"
 	criticalTimeout = 15 * time.Second
 	interval        = 100 * time.Millisecond
 )
 
+var version = VersionObj{
+	BuildTime:       time.Unix(0, 0),
+	GitCommit:       "d6cd1e2bd19e03a81132a23b2025920577f84e37",
+	Language:        "go",
+	LanguageVersion: "1.12",
+	Version:         "1.0.0",
+}
+
 func getTestCheck(msg string) *Check {
 	timeAfterCreation := time.Now().UTC()
+	previousFailure := timeAfterCreation.Add(time.Duration(-30) * time.Minute)
 	return &Check{
 		Status:      StatusOK,
 		StatusCode:  200,
 		Message:     msg,
-		LastChecked: timeAfterCreation,
-		LastSuccess: timeAfterCreation,
-		LastFailure: timeAfterCreation.Add(time.Duration(-30) * time.Minute),
+		LastChecked: &timeAfterCreation,
+		LastSuccess: &timeAfterCreation,
+		LastFailure: &previousFailure,
 	}
 }
 
@@ -75,7 +83,11 @@ func TestCreate(t *testing.T) {
 		hc.Tickers[0].client.mutex.Lock()
 		So(hc.Clients[0], ShouldPointTo, clients[0])
 		hc.Tickers[0].client.mutex.Unlock()
-		So(hc.Version, ShouldEqual, "1.0.0")
+		So(hc.Version.BuildTime, ShouldEqual, time.Unix(0, 0))
+		So(hc.Version.GitCommit, ShouldEqual, "d6cd1e2bd19e03a81132a23b2025920577f84e37")
+		So(hc.Version.Language, ShouldEqual, "go")
+		So(hc.Version.LanguageVersion, ShouldEqual, "1.12")
+		So(hc.Version.Version, ShouldEqual, "1.0.0")
 		So(hc.StartTime, ShouldHappenBetween, timeBeforeCreation, time.Now().UTC())
 		So(hc.CriticalErrorTimeout, ShouldEqual, criticalTimeout)
 		So(len(hc.Tickers), ShouldEqual, 1)
@@ -104,7 +116,11 @@ func TestCreate(t *testing.T) {
 		So(hc.Clients[0], ShouldPointTo, clients[0])
 		hc.Tickers[0].client.mutex.Unlock()
 
-		So(hc.Version, ShouldEqual, "1.0.0")
+		So(hc.Version.BuildTime, ShouldEqual, time.Unix(0, 0))
+		So(hc.Version.GitCommit, ShouldEqual, "d6cd1e2bd19e03a81132a23b2025920577f84e37")
+		So(hc.Version.Language, ShouldEqual, "go")
+		So(hc.Version.LanguageVersion, ShouldEqual, "1.12")
+		So(hc.Version.Version, ShouldEqual, "1.0.0")
 		So(hc.StartTime, ShouldHappenBetween, timeBeforeCreation, time.Now().UTC())
 		So(hc.CriticalErrorTimeout, ShouldEqual, criticalTimeout)
 		So(len(hc.Tickers), ShouldEqual, 1)
@@ -134,7 +150,11 @@ func TestCreate(t *testing.T) {
 		So(hc.Clients[0], ShouldPointTo, clients[0])
 		hc.Tickers[0].client.mutex.Unlock()
 
-		So(hc.Version, ShouldEqual, "1.0.0")
+		So(hc.Version.BuildTime, ShouldEqual, time.Unix(0, 0))
+		So(hc.Version.GitCommit, ShouldEqual, "d6cd1e2bd19e03a81132a23b2025920577f84e37")
+		So(hc.Version.Language, ShouldEqual, "go")
+		So(hc.Version.LanguageVersion, ShouldEqual, "1.12")
+		So(hc.Version.Version, ShouldEqual, "1.0.0")
 		So(hc.StartTime, ShouldHappenBetween, timeBeforeCreation, time.Now().UTC())
 		So(hc.CriticalErrorTimeout, ShouldEqual, criticalTimeout)
 		So(len(hc.Tickers), ShouldEqual, 1)
