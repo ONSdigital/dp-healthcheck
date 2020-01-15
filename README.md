@@ -19,15 +19,101 @@ Read the [Health Check Specification](https://github.com/ONSdigital/dp/blob/mast
 
 - Versioning Information
 - Critical time duration; time to wait for dependent apps critical unhealthy status to make current app unhealthy- Time Interval to run health checks on dependencies
-- Clients; An array of clients created in the previous step
+- Clients; An array of clients created in the previous step, like so:
+
+```
+package main
+
+import (
+    ...
+    health "github.com/ONSdigital/dp-healthcheck/healthcheck"
+    ...
+)
+...
+var BuildTime, GitCommit, Version string
+...
+
+func main() {
+    ...
+
+    versionInfo := health.CreateVersionInfo(
+        time.Unix(BuildTime, 0),
+        GitCommit,
+        Version,
+    )
+
+    var clients []*health.Client
+    clients := append(clients, <newClient>)
+
+    criticalTimeout := time.Minute
+    interval := 10 * time.Second
+
+    hc := health.Create(versionInfo criticalTimeout, interval, clients)
+
+    ...
+}
+```
 
 4. Optionally call `AddClient` on the healthcheck to add additional clients, note this can only be done prior to `Start()` being called
 
-5. Call `Start()` on the healthcheck
+```
+    ...
+    mongoClient := <mongo health client>
+
+    if err = hc.AddClient(mongoClient); err != nil {
+        ...
+    }
+    ...
+
+```
+
+5. Setting the BuildTime, GitCommit and Version during compile time, using the following commands:
+
+```
+BUILD_TIME=$(date +%s)
+GIT_COMMIT=$(git rev-list -1 HEAD) VERSION=$VERSION_FROM_CI 
+
+go build -ldflags="-X 'main.BuildTime=$BUILD_TIME' -X 'main.GitCommit=$GIT_COMMIT' -X 'main.Version=$VERSION'"`
+```
+
+Makefile example:
+
+```
+...
+BUILD_TIME=$(shell date +%s)
+GIT_COMMIT=$(shell git rev-list -1 HEAD)
+VERSION=$(VERSION_FROM_CI)
+...
+
+build:
+        @mkdir -p $(BUILD_ARCH)/$(BIN_DIR)
+        go build -o $(BUILD_ARCH)/$(BIN_DIR)/$(MAIN) -ldflags "-X main.BuildTime=$BUILD_TIME -X main.GitCommit=$GIT_COMMIT -X main.Version=$VERSION" cmd/$(MAIN)/main.go
+debug:
+        HUMAN_LOG=1 go run -race -ldflags "-X main.BuildTime=$BUILD_TIME -X main.GitCommit=$GIT_COMMIT -X main.Version=$VERSION" cmd/$(MAIN)/main.go
+...
+```
+
+6. Call `Start()` on the healthcheck
+
+```
+    ...
+    ctx := context.Context(context.Background())
+
+    hc.Start(ctx)
+    ...
+```
+
+7. Call `Stop()` on healthcheck to gracefully shutdown application
+
+```
+    ...
+    hc.Stop()
+    ...
+```
 
 ### Configuration
 
-Configuration of the health check takes place via arguments passed to the `Create()` function
+Configuration of the health check takes place via arguments passed to the `Create()` function, this includes a variable of `VersionInfo` which can be created by passing arguments to the `CreateVersionInfo()` function, see below example of setup:
 
 ### Contributing
 
