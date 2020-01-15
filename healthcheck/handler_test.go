@@ -14,7 +14,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-var testVersion = VersionObj{
+var testVersion = VersionInfo{
 	BuildTime:       time.Unix(0, 0),
 	GitCommit:       "d6cd1e2bd19e03a81132a23b2025920577f84e37",
 	Language:        "go",
@@ -59,7 +59,7 @@ func createClientsSlice(checks []Check, pretendHistory bool) []*Client {
 	return clients
 }
 
-func runHealthCheckHandlerAndTest(t *testing.T, hc HealthCheck, desiredStatus string, testVersion VersionObj, testStartTime time.Time, checks []Check) {
+func runHealthCheckHandlerAndTest(t *testing.T, hc HealthCheck, desiredStatus string, testVersion VersionInfo, testStartTime time.Time, checks []Check) {
 	req, err := http.NewRequest("GET", "/healthcheck", nil)
 	if err != nil {
 		t.Fail()

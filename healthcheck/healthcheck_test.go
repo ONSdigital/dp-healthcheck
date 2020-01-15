@@ -3,6 +3,7 @@ package healthcheck
 import (
 	"context"
 	"errors"
+	"runtime"
 	"testing"
 	"time"
 
@@ -15,10 +16,10 @@ const (
 	interval        = 100 * time.Millisecond
 )
 
-var version = VersionObj{
+var version = VersionInfo{
 	BuildTime:       time.Unix(0, 0),
 	GitCommit:       "d6cd1e2bd19e03a81132a23b2025920577f84e37",
-	Language:        "go",
+	Language:        language,
 	LanguageVersion: "1.12",
 	Version:         "1.0.0",
 }
@@ -85,7 +86,7 @@ func TestCreate(t *testing.T) {
 		hc.Tickers[0].client.mutex.Unlock()
 		So(hc.Version.BuildTime, ShouldEqual, time.Unix(0, 0))
 		So(hc.Version.GitCommit, ShouldEqual, "d6cd1e2bd19e03a81132a23b2025920577f84e37")
-		So(hc.Version.Language, ShouldEqual, "go")
+		So(hc.Version.Language, ShouldEqual, language)
 		So(hc.Version.LanguageVersion, ShouldEqual, "1.12")
 		So(hc.Version.Version, ShouldEqual, "1.0.0")
 		So(hc.StartTime, ShouldHappenBetween, timeBeforeCreation, time.Now().UTC())
@@ -118,7 +119,7 @@ func TestCreate(t *testing.T) {
 
 		So(hc.Version.BuildTime, ShouldEqual, time.Unix(0, 0))
 		So(hc.Version.GitCommit, ShouldEqual, "d6cd1e2bd19e03a81132a23b2025920577f84e37")
-		So(hc.Version.Language, ShouldEqual, "go")
+		So(hc.Version.Language, ShouldEqual, language)
 		So(hc.Version.LanguageVersion, ShouldEqual, "1.12")
 		So(hc.Version.Version, ShouldEqual, "1.0.0")
 		So(hc.StartTime, ShouldHappenBetween, timeBeforeCreation, time.Now().UTC())
@@ -152,7 +153,7 @@ func TestCreate(t *testing.T) {
 
 		So(hc.Version.BuildTime, ShouldEqual, time.Unix(0, 0))
 		So(hc.Version.GitCommit, ShouldEqual, "d6cd1e2bd19e03a81132a23b2025920577f84e37")
-		So(hc.Version.Language, ShouldEqual, "go")
+		So(hc.Version.Language, ShouldEqual, language)
 		So(hc.Version.LanguageVersion, ShouldEqual, "1.12")
 		So(hc.Version.Version, ShouldEqual, "1.0.0")
 		So(hc.StartTime, ShouldHappenBetween, timeBeforeCreation, time.Now().UTC())
@@ -283,5 +284,25 @@ func TestCreate(t *testing.T) {
 				So(len(hc.Tickers), ShouldEqual, origNumberOfTickers)
 			})
 		})
+	})
+}
+
+func TestCreateVersionInfo(t *testing.T) {
+	Convey("Create a new versionInfo object", t, func() {
+		buildTime := time.Unix(0, 0)
+		gitCommit := "d6cd1e2bd19e03a81132a23b2025920577f84e37"
+		version := "1.0.0"
+
+		expectedVersion := VersionInfo{
+			BuildTime:       buildTime,
+			GitCommit:       gitCommit,
+			Language:        language,
+			LanguageVersion: runtime.Version(),
+			Version:         version,
+		}
+
+		outputVersion := CreateVersionInfo(buildTime, gitCommit, version)
+
+		So(outputVersion, ShouldResemble, expectedVersion)
 	})
 }

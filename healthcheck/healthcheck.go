@@ -3,10 +3,13 @@ package healthcheck
 import (
 	"context"
 	"errors"
+	"runtime"
 	"time"
 
 	"github.com/ONSdigital/log.go/log"
 )
+
+const language = "go"
 
 // Checker represents the interface all checker functions abide to
 type Checker func(context.Context) (*Check, error)
@@ -25,7 +28,7 @@ type Check struct {
 // HealthCheck represents the structure of the current health of a service/app
 type HealthCheck struct {
 	Status                   string        `json:"status"`
-	Version                  VersionObj    `json:"version"`
+	Version                  VersionInfo   `json:"version"`
 	Uptime                   time.Duration `json:"uptime"`
 	StartTime                time.Time     `json:"start_time"`
 	Checks                   []Check       `json:"checks"`
@@ -37,8 +40,8 @@ type HealthCheck struct {
 	Tickers                  []*ticker     `json:"-"`
 }
 
-// VersionObj represents the version information of service/app
-type VersionObj struct {
+// VersionInfo represents the version information of service/app
+type VersionInfo struct {
 	BuildTime       time.Time `json:"build_time"`
 	GitCommit       string    `json:"git_commit"`
 	Language        string    `json:"language"`
@@ -51,7 +54,7 @@ type VersionObj struct {
 // criticalTimeout for how long to wait until an unhealthy dependent propagates its state to make this app unhealthy
 // interval in which to check health of dependencies
 // clients of type Client which contain a Checker function which is run to check the health of dependent apps
-func Create(version VersionObj, criticalTimeout, interval time.Duration, clients []*Client) HealthCheck {
+func Create(version VersionInfo, criticalTimeout, interval time.Duration, clients []*Client) HealthCheck {
 
 	hc := HealthCheck{
 		Started:              false,
@@ -61,6 +64,20 @@ func Create(version VersionObj, criticalTimeout, interval time.Duration, clients
 		Interval:             interval,
 	}
 	return hc
+}
+
+// CreateVersionInfo returns a health check version info object. Caller to provide:
+// buildTime for when the app was built
+// gitCommit the SHA-1 commit hash of the built app
+// version the semantic version of the built app
+func CreateVersionInfo(buildTime time.Time, gitCommit, version string) VersionInfo {
+	return VersionInfo{
+		BuildTime:       buildTime,
+		GitCommit:       gitCommit,
+		Language:        language,
+		LanguageVersion: runtime.Version(),
+		Version:         version,
+	}
 }
 
 // AddClient adds a provided client to the healthcheck
