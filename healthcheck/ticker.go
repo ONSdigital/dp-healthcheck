@@ -11,17 +11,17 @@ type ticker struct {
 	timeTicker *time.Ticker
 	closing    chan bool
 	closed     chan bool
-	client     *Client
+	check      *Check
 }
 
-// createTicker will create a ticker that calls an individual clients checker function at the provided interval
-func createTicker(interval time.Duration, client *Client) *ticker {
+// createTicker will create a ticker that calls an individual check's checker function at the provided interval
+func createTicker(interval time.Duration, check *Check) *ticker {
 	intervalWithJitter := calcIntervalWithJitter(interval)
 	return &ticker{
 		timeTicker: time.NewTicker(intervalWithJitter),
 		closing:    make(chan bool),
 		closed:     make(chan bool),
-		client:     client,
+		check:      check,
 	}
 }
 
@@ -42,22 +42,22 @@ func (ticker *ticker) start(ctx context.Context) {
 	}()
 }
 
-// runCheck runs a checker function on the client associated with the ticker
+// runCheck runs a checker function of the check associated with the ticker
 func (ticker *ticker) runCheck(ctx context.Context) {
-	checkerFunc := *ticker.client.Checker
+	checkerFunc := *ticker.check.Checker
 	checkResults, err := checkerFunc(ctx)
 	if err != nil {
 		name := "no check has been made yet"
-		if ticker.client.Check != nil {
-			name = ticker.client.Check.Name
+		if ticker.check.State != nil {
+			name = ticker.check.State.Name
 		}
 		log.Event(nil, "failed", log.Error(err), log.Data{"external_service": name})
 		return
 	}
 
-	ticker.client.mutex.Lock()
-	defer ticker.client.mutex.Unlock()
-	ticker.client.Check = checkResults
+	ticker.check.mutex.Lock()
+	defer ticker.check.mutex.Unlock()
+	ticker.check.State = checkResults
 }
 
 // stop the ticker

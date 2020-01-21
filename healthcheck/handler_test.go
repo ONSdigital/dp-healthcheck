@@ -21,25 +21,25 @@ var testVersion = VersionInfo{
 	Version:         "1.0.0",
 }
 
-func createATestChecker(checkToReturn Check) *Checker {
-	checkerFunc := Checker(func(ctx context.Context) (check *Check, err error) {
-		return &checkToReturn, nil
+func createATestChecker(stateToReturn CheckState) *Checker {
+	checkerFunc := Checker(func(ctx context.Context) (status *CheckState, err error) {
+		return &stateToReturn, nil
 	})
 	return &checkerFunc
 }
 
-func createATestClient(checkToReturn Check, pretendHistory bool) *Client {
-	checkerFunc := createATestChecker(checkToReturn)
-	cli, _ := newClient(checkerFunc)
+func createATestCheck(stateToReturn CheckState, pretendHistory bool) *Check {
+	checkerFunc := createATestChecker(stateToReturn)
+	check, _ := newCheck(checkerFunc)
 	if pretendHistory {
-		cli.Check = &checkToReturn
+		check.State = &stateToReturn
 	}
-	return cli
+	return check
 }
 
-func createHealthCheck(checks []Check, startTime time.Time, critErrTimeout time.Duration, firstCritErr time.Time, pretendHistory bool) HealthCheck {
+func createHealthCheck(statuses []CheckState, startTime time.Time, critErrTimeout time.Duration, firstCritErr time.Time, pretendHistory bool) HealthCheck {
 	hc := HealthCheck{
-		Clients:                  createClientsSlice(checks, pretendHistory),
+		Checks:                   createChecksSlice(statuses, pretendHistory),
 		Version:                  testVersion,
 		StartTime:                startTime,
 		CriticalErrorTimeout:     critErrTimeout,
@@ -49,16 +49,16 @@ func createHealthCheck(checks []Check, startTime time.Time, critErrTimeout time.
 	return hc
 }
 
-func createClientsSlice(checks []Check, pretendHistory bool) []*Client {
-	var clients []*Client
-	for _, check := range checks {
-		clients = append(clients, createATestClient(check, pretendHistory))
+func createChecksSlice(statuses []CheckState, pretendHistory bool) []*Check {
+	var checks []*Check
+	for _, status := range statuses {
+		checks = append(checks, createATestCheck(status, pretendHistory))
 	}
-	return clients
+	return checks
 }
 
-func runHealthCheckHandlerAndTest(t *testing.T, hc HealthCheck, desiredStatus string, testVersion VersionInfo, testStartTime time.Time, checks []Check) {
-	req, err := http.NewRequest("GET", "/healthcheck", nil)
+func runHealthHandlerAndTest(t *testing.T, hc HealthCheck, desiredStatus string, testVersion VersionInfo, testStartTime time.Time, statuses []CheckState) {
+	req, err := http.NewRequest("GET", "/health", nil)
 	if err != nil {
 		t.Fail()
 	}
@@ -73,6 +73,7 @@ func runHealthCheckHandlerAndTest(t *testing.T, hc HealthCheck, desiredStatus st
 	err = json.Unmarshal(b, &healthCheck)
 	if err != nil {
 		log.Event(nil, "unable to unmarshal bytes into healthcheck", log.Error(err))
+
 		So(err, ShouldBeNil)
 		return
 	}
@@ -80,15 +81,22 @@ func runHealthCheckHandlerAndTest(t *testing.T, hc HealthCheck, desiredStatus st
 	So(healthCheck.Status, ShouldEqual, desiredStatus)
 	So(healthCheck.Version, ShouldResemble, testVersion)
 	So(healthCheck.StartTime, ShouldEqual, testStartTime)
-	So(healthCheck.Checks, ShouldResemble, checks)
 	So(healthCheck.Uptime, ShouldNotBeNil)
 	So(time.Now().UTC().After(healthCheck.StartTime.Add(healthCheck.Uptime)), ShouldBeTrue)
+
+	if statuses != nil {
+		for i, check := range healthCheck.Checks {
+			So(*check.State, ShouldResemble, statuses[i])
+		}
+	} else {
+
+	}
 }
 
 func TestHandler(t *testing.T) {
 	testStartTime := time.Now().UTC().Add(-20 * time.Minute)
 	priorTestTime := testStartTime.Add(-30 * time.Minute)
-	healthyCheck1 := Check{
+	healthyStatus1 := CheckState{
 		Name:        "Some App 1",
 		Status:      StatusOK,
 		StatusCode:  http.StatusOK,
@@ -97,7 +105,7 @@ func TestHandler(t *testing.T) {
 		LastSuccess: &testStartTime,
 		LastFailure: &priorTestTime,
 	}
-	healthyCheck2 := Check{
+	healthyStatus2 := CheckState{
 		Name:        "Some App 2",
 		Status:      StatusOK,
 		StatusCode:  http.StatusOK,
@@ -106,7 +114,7 @@ func TestHandler(t *testing.T) {
 		LastSuccess: &testStartTime,
 		LastFailure: &priorTestTime,
 	}
-	healthyCheck3 := Check{
+	healthyStatus3 := CheckState{
 		Name:        "Some App 3",
 		Status:      StatusOK,
 		Message:     "Some message about app 2 here",
@@ -114,7 +122,7 @@ func TestHandler(t *testing.T) {
 		LastSuccess: &testStartTime,
 		LastFailure: &priorTestTime,
 	}
-	unhealthyCheck := Check{
+	unhealthyStatus := CheckState{
 		Name:        "Some App 4",
 		Status:      StatusWarning,
 		StatusCode:  http.StatusTooManyRequests,
@@ -123,7 +131,7 @@ func TestHandler(t *testing.T) {
 		LastSuccess: &priorTestTime,
 		LastFailure: &testStartTime,
 	}
-	criticalCheck := Check{
+	criticalStatus := CheckState{
 		Name:        "Some App 5",
 		Status:      StatusCritical,
 		StatusCode:  http.StatusInternalServerError,
@@ -132,7 +140,7 @@ func TestHandler(t *testing.T) {
 		LastSuccess: &priorTestTime,
 		LastFailure: &testStartTime,
 	}
-	freshCriticalCheck := Check{
+	freshCriticalStatus := CheckState{
 		Name:        "Some App 6",
 		Status:      StatusCritical,
 		StatusCode:  http.StatusInternalServerError,
@@ -143,53 +151,53 @@ func TestHandler(t *testing.T) {
 	}
 
 	Convey("Given a complete Healthy set of checks the app should report back as healthy", t, func() {
-		checks := []Check{healthyCheck1, healthyCheck2, healthyCheck3}
-		hc := createHealthCheck(checks, testStartTime, 10*time.Minute, testStartTime.Add(-30*time.Minute), true)
-		runHealthCheckHandlerAndTest(t, hc, StatusOK, testVersion, testStartTime, checks)
+		statuses := []CheckState{healthyStatus1, healthyStatus2, healthyStatus3}
+		hc := createHealthCheck(statuses, testStartTime, 10*time.Minute, testStartTime.Add(-30*time.Minute), true)
+		runHealthHandlerAndTest(t, hc, StatusOK, testVersion, testStartTime, statuses)
 	})
 	Convey("Given a healthy app and an unhealthy app", t, func() {
-		checks := []Check{healthyCheck1, unhealthyCheck}
-		hc := createHealthCheck(checks, testStartTime, 15*time.Second, testStartTime.Add(-30*time.Minute), true)
-		runHealthCheckHandlerAndTest(t, hc, StatusWarning, testVersion, testStartTime, checks)
+		statuses := []CheckState{healthyStatus1, unhealthyStatus}
+		hc := createHealthCheck(statuses, testStartTime, 15*time.Second, testStartTime.Add(-30*time.Minute), true)
+		runHealthHandlerAndTest(t, hc, StatusWarning, testVersion, testStartTime, statuses)
 	})
 	Convey("Given a healthy app and a critical app that is beyond the threshold", t, func() {
-		checks := []Check{healthyCheck1, criticalCheck}
+		checks := []CheckState{healthyStatus1, criticalStatus}
 		hc := createHealthCheck(checks, testStartTime, 10*time.Minute, testStartTime.Add(-22*time.Minute), true)
-		runHealthCheckHandlerAndTest(t, hc, StatusCritical, testVersion, testStartTime, checks)
+		runHealthHandlerAndTest(t, hc, StatusCritical, testVersion, testStartTime, checks)
 	})
 	Convey("Given an unhealthy app and an app that has just turned critical and is under the critical threshold", t, func() {
-		checks := []Check{unhealthyCheck, freshCriticalCheck}
-		hc := createHealthCheck(checks, testStartTime, 10*time.Minute, time.Now().Add(-1*time.Minute), true)
-		runHealthCheckHandlerAndTest(t, hc, StatusWarning, testVersion, testStartTime, checks)
+		statuses := []CheckState{unhealthyStatus, freshCriticalStatus}
+		hc := createHealthCheck(statuses, testStartTime, 10*time.Minute, time.Now().Add(-1*time.Minute), true)
+		runHealthHandlerAndTest(t, hc, StatusWarning, testVersion, testStartTime, statuses)
 	})
 	Convey("Given an unhealthy app and an app that has been critical for longer than the critical threshold", t, func() {
-		checks := []Check{unhealthyCheck, criticalCheck}
-		hc := createHealthCheck(checks, testStartTime, 10*time.Minute, testStartTime.Add(-22*time.Minute), true)
-		runHealthCheckHandlerAndTest(t, hc, StatusCritical, testVersion, testStartTime, checks)
+		statuses := []CheckState{unhealthyStatus, criticalStatus}
+		hc := createHealthCheck(statuses, testStartTime, 10*time.Minute, testStartTime.Add(-22*time.Minute), true)
+		runHealthHandlerAndTest(t, hc, StatusCritical, testVersion, testStartTime, statuses)
 	})
 	Convey("Given an app just started up", t, func() {
-		checks := []Check{freshCriticalCheck}
+		statuses := []CheckState{freshCriticalStatus}
 		justStartedTime := time.Now().UTC()
-		hc := createHealthCheck(checks, justStartedTime, 10*time.Minute, justStartedTime, false)
-		runHealthCheckHandlerAndTest(t, hc, StatusWarning, testVersion, justStartedTime, nil)
+		hc := createHealthCheck(statuses, justStartedTime, 10*time.Minute, justStartedTime, false)
+		runHealthHandlerAndTest(t, hc, StatusWarning, testVersion, justStartedTime, nil)
 	})
 	Convey("Given an app has begun to start but not finished starting up completely", t, func() {
-		checks := []Check{freshCriticalCheck}
+		statuses := []CheckState{freshCriticalStatus}
 		justStartedTime := time.Now().UTC()
-		hc := createHealthCheck(checks, justStartedTime, 10*time.Minute, justStartedTime, true)
-		runHealthCheckHandlerAndTest(t, hc, StatusWarning, testVersion, justStartedTime, checks)
+		hc := createHealthCheck(statuses, justStartedTime, 10*time.Minute, justStartedTime, true)
+		runHealthHandlerAndTest(t, hc, StatusWarning, testVersion, justStartedTime, statuses)
 	})
 	Convey("Given no apps", t, func() {
-		var clients []*Client
-		var checks []Check
+		var checks []*Check
+		var statuses []CheckState
 		hc := HealthCheck{
-			Clients:                  clients,
+			Checks:                   checks,
 			Version:                  testVersion,
 			StartTime:                testStartTime,
 			CriticalErrorTimeout:     10 * time.Minute,
 			TimeOfFirstCriticalError: testStartTime.Add(-30 * time.Minute),
 			Tickers:                  nil,
 		}
-		runHealthCheckHandlerAndTest(t, hc, StatusOK, testVersion, testStartTime, checks)
+		runHealthHandlerAndTest(t, hc, StatusOK, testVersion, testStartTime, statuses)
 	})
 }

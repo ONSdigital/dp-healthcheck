@@ -9,7 +9,7 @@ import (
 	"github.com/ONSdigital/log.go/log"
 )
 
-// A list of possible health check status codes
+// A list of possible health statuses
 const (
 	StatusOK       = "OK"
 	StatusCritical = "CRITICAL"
@@ -21,17 +21,8 @@ func (hc HealthCheck) Handler(w http.ResponseWriter, req *http.Request) {
 	now := time.Now().UTC()
 	ctx := req.Context()
 
-	var checks []Check
-
-	for _, client := range hc.Clients {
-		if client.Check != nil {
-			checks = append(checks, *client.Check)
-		}
-	}
-
 	hc.Status = hc.getStatus(ctx)
 	hc.Uptime = now.Sub(hc.StartTime)
-	hc.Checks = checks
 
 	b, err := json.Marshal(hc)
 	if err != nil {
@@ -48,8 +39,8 @@ func (hc HealthCheck) Handler(w http.ResponseWriter, req *http.Request) {
 
 // isAppStartingUp returns false when all clients have completed at least one check
 func (hc HealthCheck) isAppStartingUp() bool {
-	for _, client := range hc.Clients {
-		if client.Check == nil {
+	for _, check := range hc.Checks {
+		if check.State == nil {
 			return true
 		}
 	}
@@ -65,11 +56,11 @@ func (hc HealthCheck) getStatus(ctx context.Context) string {
 	return hc.isAppHealthy()
 }
 
-// isAppHealthy checks every clients check for their health then produces and returns a status for this apps health
+// isAppHealthy checks every check for their health then produces and returns a status for this apps health
 func (hc HealthCheck) isAppHealthy() string {
 	status := StatusOK
-	for _, client := range hc.Clients {
-		appHealth := hc.readAppHealth(client)
+	for _, check := range hc.Checks {
+		appHealth := hc.readAppHealth(check)
 		if appHealth == StatusCritical {
 			return StatusCritical
 		} else if appHealth == StatusWarning {
@@ -80,14 +71,14 @@ func (hc HealthCheck) isAppHealthy() string {
 }
 
 // readAppHealth locks mutex then reads a check finally it unlocks the mutex.
-func (hc HealthCheck) readAppHealth(client *Client) string {
-	client.mutex.Lock()
-	defer client.mutex.Unlock()
-	return hc.isCheckHealthy(client.Check)
+func (hc HealthCheck) readAppHealth(check *Check) string {
+	check.mutex.Lock()
+	defer check.mutex.Unlock()
+	return hc.isCheckHealthy(check.State)
 }
 
 // isCheckHealthy returns a string for the status on if an individual dependent apps health
-func (hc HealthCheck) isCheckHealthy(c *Check) string {
+func (hc HealthCheck) isCheckHealthy(c *CheckState) string {
 	now := time.Now().UTC()
 	switch c.Status {
 	case StatusWarning:
