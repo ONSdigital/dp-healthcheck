@@ -5,8 +5,6 @@ import (
 	"errors"
 	"runtime"
 	"time"
-
-	"github.com/ONSdigital/log.go/log"
 )
 
 const language = "go"
@@ -53,8 +51,10 @@ type VersionInfo struct {
 // version information of the app,
 // criticalTimeout for how long to wait until an unhealthy dependent propagates its state to make this app unhealthy
 // interval in which to check health of dependencies
-// clients of type Client which contain a Checker function which is run to check the health of dependent apps
-func Create(version VersionInfo, criticalTimeout, interval time.Duration, clients []*Client) HealthCheck {
+// checkers of type Checker which are functions run to check the health of the app and/or its dependencies
+func Create(version VersionInfo, criticalTimeout, interval time.Duration, checkers ...*Checker) HealthCheck {
+
+	var clients []*Client
 
 	hc := HealthCheck{
 		Started:              false,
@@ -63,6 +63,11 @@ func Create(version VersionInfo, criticalTimeout, interval time.Duration, client
 		CriticalErrorTimeout: criticalTimeout,
 		Interval:             interval,
 	}
+
+	for _, checker := range checkers {
+		hc.AddCheck(checker)
+	}
+
 	return hc
 }
 
@@ -80,15 +85,21 @@ func CreateVersionInfo(buildTime time.Time, gitCommit, version string) VersionIn
 	}
 }
 
-// AddClient adds a provided client to the healthcheck
-func (hc *HealthCheck) AddClient(c *Client) (err error) {
+// AddCheck adds a provided checker to the healthcheck
+func (hc *HealthCheck) AddCheck(checker *Checker) (err error) {
 	if hc.Started {
-		err = errors.New("unable to add new client, health check has already started")
-		log.Event(nil, "health check has already started", log.Error(err))
-		return
+		err := errors.New("unable to add new client, health check has already started")
+		return err
 	}
-	hc.Clients = append(hc.Clients, c)
-	return
+
+	client, err := newClient(checker)
+	if err != nil {
+		return err
+	}
+
+	hc.Clients = append(hc.Clients, client)
+
+	return nil
 }
 
 // newTickers returns an array of tickers based on the number of clients in the clients parameter.

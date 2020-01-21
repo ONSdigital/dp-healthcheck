@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	rchttp "github.com/ONSdigital/dp-rchttp"
 	"github.com/ONSdigital/log.go/log"
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -31,8 +30,7 @@ func createATestChecker(checkToReturn Check) *Checker {
 
 func createATestClient(checkToReturn Check, pretendHistory bool) *Client {
 	checkerFunc := createATestChecker(checkToReturn)
-	clienter := rchttp.NewClient()
-	cli, _ := NewClient(clienter, checkerFunc)
+	cli, _ := newClient(checkerFunc)
 	if pretendHistory {
 		cli.Check = &checkToReturn
 	}

@@ -36,19 +36,20 @@ var BuildTime, GitCommit, Version string
 func main() {
     ...
 
+    criticalTimeout := time.Minute
+    interval := 10 * time.Second
+
     versionInfo := health.CreateVersionInfo(
         time.Unix(BuildTime, 0),
         GitCommit,
         Version,
     )
 
-    var clients []*health.Client
-    clients := append(clients, <newClient>)
+    # Initialise your clients
+    cli1 := client1.NewAPIClient()
+    cli2 := client2.NewDataStoreClient()
 
-    criticalTimeout := time.Minute
-    interval := 10 * time.Second
-
-    hc := health.Create(versionInfo criticalTimeout, interval, clients)
+    hc := health.Create(versionInfo criticalTimeout, interval, &cli1.Checker, &cli2.Checker)
 
     ...
 }
@@ -60,7 +61,7 @@ func main() {
     ...
     mongoClient := <mongo health client>
 
-    if err = hc.AddClient(mongoClient); err != nil {
+    if err = hc.AddCheck(&mongoClient.Checker); err != nil {
         ...
     }
     ...

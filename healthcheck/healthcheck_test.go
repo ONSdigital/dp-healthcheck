@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	rchttp "github.com/ONSdigital/dp-rchttp"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -37,18 +36,6 @@ func getTestCheck(msg string) *Check {
 	}
 }
 
-func getTestClient(name string, checker *Checker, chk *Check) *Client {
-	client, err := NewClient(
-		rchttp.NewClient(),
-		checker,
-	)
-	if err != nil {
-		return nil
-	}
-	client.Check = chk
-	return client
-}
-
 func TestCreate(t *testing.T) {
 	healthyCheck1 := getTestCheck("Success from app 1")
 	healthyCheck2 := getTestCheck("Success from app 2")
@@ -71,18 +58,13 @@ func TestCreate(t *testing.T) {
 
 	Convey("Create a new Health Check given one good working check function to run with status code", t, func() {
 		ctx := context.Background()
-		clients := []*Client{getTestClient(
-			"ok1 client",
-			&cfok1,
-			nil,
-		)}
 		timeBeforeCreation := time.Now().UTC()
-		hc := Create(version, criticalTimeout, interval, clients)
+		hc := Create(version, criticalTimeout, interval, &cfok1)
 		hc.Start(ctx)
 		defer hc.Stop()
 
 		hc.Tickers[0].client.mutex.Lock()
-		So(hc.Clients[0], ShouldPointTo, clients[0])
+		So(hc.Clients[0].Checker, ShouldPointTo, &cfok1)
 		hc.Tickers[0].client.mutex.Unlock()
 		So(hc.Version.BuildTime, ShouldEqual, time.Unix(0, 0))
 		So(hc.Version.GitCommit, ShouldEqual, "d6cd1e2bd19e03a81132a23b2025920577f84e37")
@@ -103,18 +85,13 @@ func TestCreate(t *testing.T) {
 
 	Convey("Create a new Health Check given one good working check function to run (with status code)", t, func() {
 		ctx := context.Background()
-		clients := []*Client{getTestClient(
-			"ok3 check",
-			&cfok3,
-			nil,
-		)}
 		timeBeforeCreation := time.Now().UTC()
-		hc := Create(version, criticalTimeout, interval, clients)
+		hc := Create(version, criticalTimeout, interval, &cfok3)
 		hc.Start(ctx)
 		defer hc.Stop()
 
 		hc.Tickers[0].client.mutex.Lock()
-		So(hc.Clients[0], ShouldPointTo, clients[0])
+		So(hc.Clients[0].Checker, ShouldPointTo, &cfok3)
 		hc.Tickers[0].client.mutex.Unlock()
 
 		So(hc.Version.BuildTime, ShouldEqual, time.Unix(0, 0))
@@ -137,18 +114,13 @@ func TestCreate(t *testing.T) {
 
 	Convey("Create a new Health Check given one good working check function to run (without status code)", t, func() {
 		ctx := context.Background()
-		clients := []*Client{getTestClient(
-			"ok1 no status",
-			&cfok1,
-			nil,
-		)}
 		timeBeforeCreation := time.Now().UTC()
-		hc := Create(version, criticalTimeout, interval, clients)
+		hc := Create(version, criticalTimeout, interval, &cfok1)
 		hc.Start(ctx)
 		defer hc.Stop()
 
 		hc.Tickers[0].client.mutex.Lock()
-		So(hc.Clients[0], ShouldPointTo, clients[0])
+		So(hc.Clients[0].Checker, ShouldPointTo, &cfok1)
 		hc.Tickers[0].client.mutex.Unlock()
 
 		So(hc.Version.BuildTime, ShouldEqual, time.Unix(0, 0))
@@ -169,14 +141,66 @@ func TestCreate(t *testing.T) {
 			So(checkResponse, ShouldResemble, healthyCheck1)
 		})
 	})
+
+	Convey("Create a new Health Check given two good working check functions to run (with status code)", t, func() {
+		ctx := context.Background()
+		timeBeforeCreation := time.Now().UTC()
+		hc := Create(version, criticalTimeout, interval, &cfok2, &cfok3)
+		hc.Start(ctx)
+		defer hc.Stop()
+
+		hc.Tickers[0].client.mutex.Lock()
+		So(hc.Clients[0].Checker, ShouldPointTo, &cfok2)
+		hc.Tickers[0].client.mutex.Unlock()
+
+		hc.Tickers[1].client.mutex.Lock()
+		So(hc.Clients[1].Checker, ShouldPointTo, &cfok3)
+		hc.Tickers[1].client.mutex.Unlock()
+
+		So(hc.Version.BuildTime, ShouldEqual, time.Unix(0, 0))
+		So(hc.Version.GitCommit, ShouldEqual, "d6cd1e2bd19e03a81132a23b2025920577f84e37")
+		So(hc.Version.Language, ShouldEqual, language)
+		So(hc.Version.LanguageVersion, ShouldEqual, "1.12")
+		So(hc.Version.Version, ShouldEqual, "1.0.0")
+		So(hc.StartTime, ShouldHappenBetween, timeBeforeCreation, time.Now().UTC())
+		So(hc.CriticalErrorTimeout, ShouldEqual, criticalTimeout)
+		So(len(hc.Tickers), ShouldEqual, 2)
+		Convey("After check functions have run, ensure they have correctly stored the results", func() {
+			time.Sleep(2 * interval)
+
+			hc.Tickers[0].client.mutex.Lock()
+			checkResponse1 := hc.Tickers[0].client.Check
+			hc.Tickers[0].client.mutex.Unlock()
+			So(checkResponse1, ShouldResemble, healthyCheck2)
+
+			hc.Tickers[1].client.mutex.Lock()
+			checkResponse2 := hc.Tickers[1].client.Check
+			hc.Tickers[1].client.mutex.Unlock()
+			So(checkResponse2, ShouldResemble, healthyCheck3)
+		})
+	})
+
+	Convey("Create a new Health Check without giving any check functions", t, func() {
+		ctx := context.Background()
+		timeBeforeCreation := time.Now().UTC()
+		hc := Create(version, criticalTimeout, interval, nil)
+		hc.Start(ctx)
+		defer hc.Stop()
+
+		So(hc.Version.BuildTime, ShouldEqual, time.Unix(0, 0))
+		So(hc.Version.GitCommit, ShouldEqual, "d6cd1e2bd19e03a81132a23b2025920577f84e37")
+		So(hc.Version.Language, ShouldEqual, language)
+		So(hc.Version.LanguageVersion, ShouldEqual, "1.12")
+		So(hc.Version.Version, ShouldEqual, "1.0.0")
+		So(hc.StartTime, ShouldHappenBetween, timeBeforeCreation, time.Now().UTC())
+		So(hc.CriticalErrorTimeout, ShouldEqual, criticalTimeout)
+		So(len(hc.Clients), ShouldEqual, 0)
+		So(len(hc.Tickers), ShouldEqual, 0)
+	})
+
 	Convey("Create a new Health Check given a broken check function", t, func() {
 		ctx := context.Background()
-		clients := []*Client{getTestClient(
-			"broken check func",
-			&cfFail,
-			nil,
-		)}
-		hc := Create(version, criticalTimeout, interval, clients)
+		hc := Create(version, criticalTimeout, interval, &cfFail)
 		hc.Start(ctx)
 		defer hc.Stop()
 
@@ -188,12 +212,8 @@ func TestCreate(t *testing.T) {
 
 	Convey("Given a Health Check with a cancellable context", t, func() {
 		ctx, cancel := context.WithCancel(context.Background())
-		clients := []*Client{getTestClient(
-			"cancel app",
-			&cfFail,
-			getTestCheck("cancellable testing"),
-		)}
-		hc := Create(version, criticalTimeout, interval, clients)
+		hc := Create(version, criticalTimeout, interval, &cfFail)
+		hc.Clients[0].Check = getTestCheck("cancellable testing")
 		hc.Start(ctx)
 		// no `defer hc.Stop()` because of `cancel()`
 
@@ -203,7 +223,7 @@ func TestCreate(t *testing.T) {
 			time.Sleep(2 * interval)
 
 			So(len(hc.Tickers), ShouldEqual, 1)
-			So(hc.Tickers[0].client.Check, ShouldPointTo, clients[0].Check)
+			So(hc.Tickers[0].client.Check, ShouldPointTo, hc.Clients[0].Check)
 			So(hc.Tickers[0].isStopping(), ShouldBeFalse)
 
 			cancel()
@@ -217,12 +237,8 @@ func TestCreate(t *testing.T) {
 
 	Convey("Create a new Health Check given 1 successful check followed by a broken run check", t, func() {
 		ctx := context.Background()
-		clients := []*Client{getTestClient(
-			"test broken2",
-			&cfFail,
-			healthyCheck1,
-		)}
-		hc := Create(version, criticalTimeout, interval, clients)
+		hc := Create(version, criticalTimeout, interval, &cfFail)
+		hc.Clients[0].Check = healthyCheck1
 		hc.Start(ctx)
 		defer hc.Stop()
 
@@ -238,18 +254,9 @@ func TestCreate(t *testing.T) {
 
 	Convey("Create a new Health Check given 1 client at creation and a second added before start is called", t, func() {
 		ctx := context.Background()
-		clients := []*Client{getTestClient(
-			"start after 2nd",
-			&cfok1,
-			healthyCheck1,
-		)}
-
-		hc := Create(version, criticalTimeout, interval, clients)
-		err := hc.AddClient(getTestClient(
-			"2nd client",
-			&cfok2,
-			nil,
-		))
+		hc := Create(version, criticalTimeout, interval, &cfok1)
+		hc.Clients[0].Check = healthyCheck1
+		err := hc.AddCheck(&cfok2)
 		So(err, ShouldBeNil)
 
 		hc.Start(ctx)
@@ -262,22 +269,14 @@ func TestCreate(t *testing.T) {
 	})
 
 	Convey("Given a Health Check with 1 client that is started", t, func() {
-		clients := []*Client{getTestClient(
-			"before late client",
-			&cfok1,
-			healthyCheck1,
-		)}
-		hc := Create(version, criticalTimeout, interval, clients)
+		hc := Create(version, criticalTimeout, interval, &cfok1)
+		hc.Clients[0].Check = healthyCheck1
 		hc.Start(context.Background())
 		defer hc.Stop()
 
 		origNumberOfTickers := len(hc.Tickers)
 		Convey("When you add another client - too late", func() {
-			err := hc.AddClient(getTestClient(
-				"late client",
-				&cfok2,
-				healthyCheck2,
-			))
+			err := hc.AddCheck(&cfok2)
 			Convey("Then there should be no increase in the number of tickers", func() {
 				So(err, ShouldNotBeNil)
 				time.Sleep(2 * interval)
