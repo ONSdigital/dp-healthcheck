@@ -71,7 +71,8 @@ func main() {
 
 ```
 BUILD_TIME=$(date +%s)
-GIT_COMMIT=$(git rev-list -1 HEAD) VERSION=$VERSION_FROM_CI 
+GIT_COMMIT=$(shell git rev-parse HEAD)
+VERSION ?= $(shell git tag --points-at HEAD | grep ^v | head -n 1)
 
 go build -ldflags="-X 'main.BuildTime=$BUILD_TIME' -X 'main.GitCommit=$GIT_COMMIT' -X 'main.Version=$VERSION'"`
 ```
@@ -81,8 +82,8 @@ Makefile example:
 ```
 ...
 BUILD_TIME=$(shell date +%s)
-GIT_COMMIT=$(shell git rev-list -1 HEAD)
-VERSION=$(VERSION_FROM_CI)
+GIT_COMMIT=$(shell git rev-parse HEAD)
+VERSION ?= $(shell git tag --points-at HEAD | grep ^v | head -n 1)
 ...
 
 build:
