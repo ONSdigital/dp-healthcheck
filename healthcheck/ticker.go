@@ -44,8 +44,7 @@ func (ticker *ticker) start(ctx context.Context) {
 
 // runCheck runs a checker function of the check associated with the ticker
 func (ticker *ticker) runCheck(ctx context.Context) {
-	checkerFunc := *ticker.check.Checker
-	checkResults, err := checkerFunc(ctx)
+	checkResults, err := ticker.check.Checker(ctx)
 	if err != nil {
 		name := "no check has been made yet"
 		if ticker.check.State != nil {

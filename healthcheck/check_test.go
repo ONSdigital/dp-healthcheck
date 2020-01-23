@@ -9,23 +9,23 @@ import (
 
 func TestCreateNew(t *testing.T) {
 	var (
-		checkerFunc = Checker(func(ctx context.Context) (check *CheckState, err error) {
+		checkerFunc = func(ctx context.Context) (check *CheckState, err error) {
 			return &CheckState{}, nil
-		})
+		}
 		check *Check
 		err   error
 	)
 	Convey("Create a new check", t, func() {
-		check, _ = newCheck(&checkerFunc)
+		check, _ = newCheck(checkerFunc)
 		So(err, ShouldBeNil)
-		So(check.Checker, ShouldPointTo, &checkerFunc)
+		So(check.Checker, ShouldEqual, checkerFunc)
 		So(check.mutex, ShouldNotBeNil)
 		So(check.State, ShouldBeNil)
 	})
 	Convey("A second new check shares the right values", t, func() {
-		check2, err := newCheck(&checkerFunc)
+		check2, err := newCheck(checkerFunc)
 		So(err, ShouldBeNil)
-		So(check2.Checker, ShouldPointTo, check.Checker)
+		So(check2.Checker, ShouldEqual, check.Checker)
 		So(check2.mutex, ShouldNotPointTo, check.mutex)
 	})
 	Convey("Fail to create a new check as checker given is nil", t, func() {

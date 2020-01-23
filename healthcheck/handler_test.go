@@ -21,15 +21,10 @@ var testVersion = VersionInfo{
 	Version:         "1.0.0",
 }
 
-func createATestChecker(stateToReturn CheckState) *Checker {
-	checkerFunc := Checker(func(ctx context.Context) (status *CheckState, err error) {
-		return &stateToReturn, nil
-	})
-	return &checkerFunc
-}
-
 func createATestCheck(stateToReturn CheckState, pretendHistory bool) *Check {
-	checkerFunc := createATestChecker(stateToReturn)
+	checkerFunc := func(ctx context.Context) (status *CheckState, err error) {
+		return &stateToReturn, nil
+	}
 	check, _ := newCheck(checkerFunc)
 	if pretendHistory {
 		check.State = &stateToReturn

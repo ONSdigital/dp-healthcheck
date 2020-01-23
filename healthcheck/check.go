@@ -25,13 +25,13 @@ type CheckState struct {
 // Check represents a check performed by the health check
 type Check struct {
 	State   *CheckState
-	Checker *Checker
+	Checker Checker
 	mutex   *sync.Mutex
 }
 
 // newCheck returns a pointer to a new instantiated Check with
 // the provided checker function
-func newCheck(checker *Checker) (*Check, error) {
+func newCheck(checker Checker) (*Check, error) {
 	if checker == nil {
 		return nil, errors.New("expected checker but none provided")
 	}
