@@ -37,7 +37,7 @@ type VersionInfo struct {
 // criticalTimeout for how long to wait until an unhealthy dependent propagates its state to make this app unhealthy
 // interval in which to check health of dependencies
 // checkers which implement the checker interface and can run a checkup to determine the health of the app and/or its dependencies
-func Create(version VersionInfo, criticalTimeout, interval time.Duration, checkers ...Checker) HealthCheck {
+func Create(version VersionInfo, criticalTimeout, interval time.Duration, checkers ...Checker) (HealthCheck, error) {
 
 	var checks []*Check
 
@@ -50,10 +50,12 @@ func Create(version VersionInfo, criticalTimeout, interval time.Duration, checke
 	}
 
 	for _, checker := range checkers {
-		hc.AddCheck(checker)
+		if err := hc.AddCheck(checker); err != nil {
+			return hc, err
+		}
 	}
 
-	return hc
+	return hc, nil
 }
 
 // CreateVersionInfo returns a health check version info object. Caller to provide:
@@ -73,8 +75,7 @@ func CreateVersionInfo(buildTime time.Time, gitCommit, version string) VersionIn
 // AddCheck adds a provided checker to the health check
 func (hc *HealthCheck) AddCheck(checker Checker) (err error) {
 	if hc.Started {
-		err := errors.New("unable to add new check, health check has already started")
-		return err
+		return errors.New("unable to add new check, health check has already started")
 	}
 
 	check, err := newCheck(checker)

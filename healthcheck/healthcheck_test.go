@@ -53,19 +53,21 @@ func TestCreate(t *testing.T) {
 
 	cfFail := func(ctx context.Context) (*CheckState, error) {
 		err := errors.New("checker failed to run for cfFail")
-		return nil, err
+		return &CheckState{}, err
 	}
 
 	Convey("Create a new Health Check given one good working check function to run with status code", t, func() {
 		ctx := context.Background()
 		timeBeforeCreation := time.Now().UTC()
-		hc := Create(version, criticalTimeout, interval, cfok1)
+		hc, err := Create(version, criticalTimeout, interval, cfok1)
 		hc.Start(ctx)
 		defer hc.Stop()
 
 		hc.Tickers[0].check.mutex.Lock()
 		So(hc.Checks[0].Checker, ShouldEqual, cfok1)
 		hc.Tickers[0].check.mutex.Unlock()
+
+		So(err, ShouldBeNil)
 		So(hc.Version.BuildTime, ShouldEqual, time.Unix(0, 0))
 		So(hc.Version.GitCommit, ShouldEqual, "d6cd1e2bd19e03a81132a23b2025920577f84e37")
 		So(hc.Version.Language, ShouldEqual, language)
@@ -86,7 +88,7 @@ func TestCreate(t *testing.T) {
 	Convey("Create a new Health Check given one good working check function to run (with status code)", t, func() {
 		ctx := context.Background()
 		timeBeforeCreation := time.Now().UTC()
-		hc := Create(version, criticalTimeout, interval, cfok3)
+		hc, err := Create(version, criticalTimeout, interval, cfok3)
 		hc.Start(ctx)
 		defer hc.Stop()
 
@@ -94,6 +96,7 @@ func TestCreate(t *testing.T) {
 		So(hc.Checks[0].Checker, ShouldEqual, cfok3)
 		hc.Tickers[0].check.mutex.Unlock()
 
+		So(err, ShouldBeNil)
 		So(hc.Version.BuildTime, ShouldEqual, time.Unix(0, 0))
 		So(hc.Version.GitCommit, ShouldEqual, "d6cd1e2bd19e03a81132a23b2025920577f84e37")
 		So(hc.Version.Language, ShouldEqual, language)
@@ -115,7 +118,7 @@ func TestCreate(t *testing.T) {
 	Convey("Create a new Health Check given one good working check function to run (without status code)", t, func() {
 		ctx := context.Background()
 		timeBeforeCreation := time.Now().UTC()
-		hc := Create(version, criticalTimeout, interval, cfok1)
+		hc, err := Create(version, criticalTimeout, interval, cfok1)
 		hc.Start(ctx)
 		defer hc.Stop()
 
@@ -123,6 +126,7 @@ func TestCreate(t *testing.T) {
 		So(hc.Checks[0].Checker, ShouldEqual, cfok1)
 		hc.Tickers[0].check.mutex.Unlock()
 
+		So(err, ShouldBeNil)
 		So(hc.Version.BuildTime, ShouldEqual, time.Unix(0, 0))
 		So(hc.Version.GitCommit, ShouldEqual, "d6cd1e2bd19e03a81132a23b2025920577f84e37")
 		So(hc.Version.Language, ShouldEqual, language)
@@ -145,7 +149,7 @@ func TestCreate(t *testing.T) {
 	Convey("Create a new Health Check given two good working check functions to run (with status code)", t, func() {
 		ctx := context.Background()
 		timeBeforeCreation := time.Now().UTC()
-		hc := Create(version, criticalTimeout, interval, cfok2, cfok3)
+		hc, err := Create(version, criticalTimeout, interval, cfok2, cfok3)
 		hc.Start(ctx)
 		defer hc.Stop()
 
@@ -157,6 +161,7 @@ func TestCreate(t *testing.T) {
 		So(hc.Checks[1].Checker, ShouldEqual, cfok3)
 		hc.Tickers[1].check.mutex.Unlock()
 
+		So(err, ShouldBeNil)
 		So(hc.Version.BuildTime, ShouldEqual, time.Unix(0, 0))
 		So(hc.Version.GitCommit, ShouldEqual, "d6cd1e2bd19e03a81132a23b2025920577f84e37")
 		So(hc.Version.Language, ShouldEqual, language)
@@ -183,10 +188,11 @@ func TestCreate(t *testing.T) {
 	Convey("Create a new Health Check without giving any check functions", t, func() {
 		ctx := context.Background()
 		timeBeforeCreation := time.Now().UTC()
-		hc := Create(version, criticalTimeout, interval, nil)
+		hc, err := Create(version, criticalTimeout, interval)
 		hc.Start(ctx)
 		defer hc.Stop()
 
+		So(err, ShouldBeNil)
 		So(hc.Version.BuildTime, ShouldEqual, time.Unix(0, 0))
 		So(hc.Version.GitCommit, ShouldEqual, "d6cd1e2bd19e03a81132a23b2025920577f84e37")
 		So(hc.Version.Language, ShouldEqual, language)
@@ -200,23 +206,31 @@ func TestCreate(t *testing.T) {
 
 	Convey("Create a new Health Check given a broken check function", t, func() {
 		ctx := context.Background()
-		hc := Create(version, criticalTimeout, interval, cfFail)
+		hc, err := Create(version, criticalTimeout, interval, cfFail)
 		hc.Start(ctx)
 		defer hc.Stop()
 
+		So(err, ShouldBeNil)
 		Convey("After check function has run, ensure it has correctly stored the results", func() {
 			time.Sleep(2 * interval)
 			So(hc.Tickers[0].check.State, ShouldBeNil)
 		})
 	})
 
+	Convey("Fail to create a new Health Check when given a nil check function", t, func() {
+		_, err := Create(version, criticalTimeout, interval, nil)
+
+		So(err, ShouldNotBeNil)
+	})
+
 	Convey("Given a Health Check with a cancellable context", t, func() {
 		ctx, cancel := context.WithCancel(context.Background())
-		hc := Create(version, criticalTimeout, interval, cfFail)
+		hc, err := Create(version, criticalTimeout, interval, cfFail)
 		hc.Checks[0].State = getTestCheck("cancellable testing")
 		hc.Start(ctx)
 		// no `defer hc.Stop()` because of `cancel()`
 
+		So(err, ShouldBeNil)
 		So(hc.Started, ShouldBeTrue)
 
 		Convey("When the check function has time to run, and the context is cancelled", func() {
@@ -237,10 +251,12 @@ func TestCreate(t *testing.T) {
 
 	Convey("Create a new Health Check given 1 successful check followed by a broken run check", t, func() {
 		ctx := context.Background()
-		hc := Create(version, criticalTimeout, interval, cfFail)
+		hc, err := Create(version, criticalTimeout, interval, cfFail)
 		hc.Checks[0].State = healthyCheck1
 		hc.Start(ctx)
 		defer hc.Stop()
+
+		So(err, ShouldBeNil)
 
 		Convey("After check function has run, the original check should not be overwritten by the failed check", func() {
 			time.Sleep(2 * interval)
@@ -251,37 +267,81 @@ func TestCreate(t *testing.T) {
 			So(checkResponse, ShouldResemble, healthyCheck1)
 		})
 	})
+}
 
-	Convey("Create a new Health Check given 1 check at creation and a second added before start is called", t, func() {
+func TestAddCheck(t *testing.T) {
+	cf := func(ctx context.Context) (*CheckState, error) {
+		return &CheckState{}, nil
+	}
+
+	Convey("Given a Health Check without any registered checks", t, func() {
 		ctx := context.Background()
-		hc := Create(version, criticalTimeout, interval, cfok1)
-		hc.Checks[0].State = healthyCheck1
-		err := hc.AddCheck(cfok2)
+		hc, err := Create(version, criticalTimeout, interval)
+
 		So(err, ShouldBeNil)
 
-		hc.Start(ctx)
-		defer hc.Stop()
+		Convey("After adding a check there should be one timer on start", func() {
+			err := hc.AddCheck(cf)
+			So(err, ShouldBeNil)
+
+			hc.Start(ctx)
+			defer hc.Stop()
+
+			time.Sleep(2 * interval)
+			So(len(hc.Tickers), ShouldEqual, 1)
+		})
+	})
+
+	Convey("Given a Health Check with 1 check registered at creation", t, func() {
+		ctx := context.Background()
+		hc, err := Create(version, criticalTimeout, interval, cf)
+
+		So(err, ShouldBeNil)
 
 		Convey("After adding the second check there should be two timers on start", func() {
+			err := hc.AddCheck(cf)
+			So(err, ShouldBeNil)
+
+			hc.Start(ctx)
+			defer hc.Stop()
+
 			time.Sleep(2 * interval)
 			So(len(hc.Tickers), ShouldEqual, 2)
 		})
 	})
 
 	Convey("Given a Health Check with 1 check that is started", t, func() {
-		hc := Create(version, criticalTimeout, interval, cfok1)
-		hc.Checks[0].State = healthyCheck1
+		hc, err := Create(version, criticalTimeout, interval, cf)
 		hc.Start(context.Background())
 		defer hc.Stop()
 
+		So(err, ShouldBeNil)
 		origNumberOfTickers := len(hc.Tickers)
 		Convey("When you add another check - too late", func() {
-			err := hc.AddCheck(cfok2)
+			err := hc.AddCheck(cf)
 			Convey("Then there should be no increase in the number of tickers", func() {
 				So(err, ShouldNotBeNil)
 				time.Sleep(2 * interval)
 				So(len(hc.Tickers), ShouldEqual, origNumberOfTickers)
 			})
+		})
+	})
+
+	Convey("Given a Health Check without any registered checks", t, func() {
+		ctx := context.Background()
+		hc, err := Create(version, criticalTimeout, interval)
+
+		So(err, ShouldBeNil)
+
+		Convey("Then adding a check with a nil checker function should fail", func() {
+			err := hc.AddCheck(nil)
+			So(err, ShouldNotBeNil)
+
+			hc.Start(ctx)
+			defer hc.Stop()
+
+			time.Sleep(2 * interval)
+			So(len(hc.Tickers), ShouldEqual, 0)
 		})
 	})
 }
