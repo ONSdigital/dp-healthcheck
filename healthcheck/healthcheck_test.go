@@ -348,20 +348,40 @@ func TestAddCheck(t *testing.T) {
 
 func TestCreateVersionInfo(t *testing.T) {
 	Convey("Create a new versionInfo object", t, func() {
-		buildTime := time.Unix(0, 0)
+		buildTime := "0"
 		gitCommit := "d6cd1e2bd19e03a81132a23b2025920577f84e37"
 		version := "1.0.0"
 
 		expectedVersion := VersionInfo{
-			BuildTime:       buildTime,
+			BuildTime:       time.Unix(0, 0),
 			GitCommit:       gitCommit,
 			Language:        language,
 			LanguageVersion: runtime.Version(),
 			Version:         version,
 		}
 
-		outputVersion := CreateVersionInfo(buildTime, gitCommit, version)
+		outputVersion, err := CreateVersionInfo(buildTime, gitCommit, version)
 
+		So(err, ShouldBeNil)
+		So(outputVersion, ShouldResemble, expectedVersion)
+	})
+
+	Convey("Create a new versionInfo object passing an invalid build time", t, func() {
+		buildTime := "some invalid date"
+		gitCommit := "d6cd1e2bd19e03a81132a23b2025920577f84e37"
+		version := "1.0.0"
+
+		expectedVersion := VersionInfo{
+			BuildTime:       time.Unix(0, 0),
+			GitCommit:       gitCommit,
+			Language:        language,
+			LanguageVersion: runtime.Version(),
+			Version:         version,
+		}
+
+		outputVersion, err := CreateVersionInfo(buildTime, gitCommit, version)
+
+		So(err, ShouldNotBeNil)
 		So(outputVersion, ShouldResemble, expectedVersion)
 	})
 }

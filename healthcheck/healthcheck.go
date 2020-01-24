@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"runtime"
+	"strconv"
 	"time"
 )
 
@@ -59,17 +60,24 @@ func Create(version VersionInfo, criticalTimeout, interval time.Duration, checke
 }
 
 // CreateVersionInfo returns a health check version info object. Caller to provide:
-// buildTime for when the app was built
+// buildTime for when the app was built as a unix time stamp in string form
 // gitCommit the SHA-1 commit hash of the built app
 // version the semantic version of the built app
-func CreateVersionInfo(buildTime time.Time, gitCommit, version string) VersionInfo {
-	return VersionInfo{
-		BuildTime:       buildTime,
+func CreateVersionInfo(buildTime, gitCommit, version string) (VersionInfo, error) {
+	versionInfo := VersionInfo{
+		BuildTime:       time.Unix(0, 0),
 		GitCommit:       gitCommit,
 		Language:        language,
 		LanguageVersion: runtime.Version(),
 		Version:         version,
 	}
+
+	parsedBuildTime, err := strconv.ParseInt(buildTime, 10, 64)
+	if err != nil {
+		return versionInfo, errors.New("failed to parse build time")
+	}
+	versionInfo.BuildTime = time.Unix(parsedBuildTime, 0)
+	return versionInfo, nil
 }
 
 // AddCheck adds a provided checker to the health check
