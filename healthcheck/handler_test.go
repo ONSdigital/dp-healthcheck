@@ -22,12 +22,15 @@ var testVersion = VersionInfo{
 }
 
 func createATestCheck(stateToReturn CheckState, pretendHistory bool) *Check {
-	checkerFunc := func(ctx context.Context) (status *CheckState, err error) {
-		return &stateToReturn, nil
+	checkerFunc := func(ctx context.Context, state *CheckState) error {
+		if pretendHistory {
+			state = &stateToReturn
+		}
+		return nil
 	}
 	check, _ := newCheck(checkerFunc)
 	if pretendHistory {
-		check.State = &stateToReturn
+		check.state = &stateToReturn
 	}
 	return check
 }
@@ -81,7 +84,7 @@ func runHealthHandlerAndTest(t *testing.T, hc HealthCheck, desiredStatus string,
 
 	if statuses != nil {
 		for i, check := range healthCheck.Checks {
-			So(*check.State, ShouldResemble, statuses[i])
+			So(*check.state, ShouldResemble, statuses[i])
 		}
 	} else {
 

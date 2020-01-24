@@ -23,10 +23,10 @@ var version = VersionInfo{
 	Version:         "1.0.0",
 }
 
-func getTestCheck(msg string) *CheckState {
+func generateTestState(msg string) CheckState {
 	timeAfterCreation := time.Now().UTC()
 	previousFailure := timeAfterCreation.Add(time.Duration(-30) * time.Minute)
-	return &CheckState{
+	return CheckState{
 		Status:      StatusOK,
 		StatusCode:  200,
 		Message:     msg,
@@ -37,23 +37,26 @@ func getTestCheck(msg string) *CheckState {
 }
 
 func TestCreate(t *testing.T) {
-	healthyCheck1 := getTestCheck("Success from app 1")
-	healthyCheck2 := getTestCheck("Success from app 2")
-	healthyCheck3 := getTestCheck("Success from app 3")
+	healthyCheck1 := generateTestState("Success from app 1")
+	healthyCheck2 := generateTestState("Success from app 2")
+	healthyCheck3 := generateTestState("Success from app 3")
 
-	cfok1 := func(ctx context.Context) (*CheckState, error) {
-		return healthyCheck1, nil
+	cfok1 := func(ctx context.Context, state *CheckState) error {
+		*state = healthyCheck1
+		return nil
 	}
-	cfok2 := func(ctx context.Context) (*CheckState, error) {
-		return healthyCheck2, nil
+	cfok2 := func(ctx context.Context, state *CheckState) error {
+		*state = healthyCheck2
+		return nil
 	}
-	cfok3 := func(ctx context.Context) (*CheckState, error) {
-		return healthyCheck3, nil
+	cfok3 := func(ctx context.Context, state *CheckState) error {
+		*state = healthyCheck3
+		return nil
 	}
 
-	cfFail := func(ctx context.Context) (*CheckState, error) {
+	cfFail := func(ctx context.Context, state *CheckState) error {
 		err := errors.New("checker failed to run for cfFail")
-		return &CheckState{}, err
+		return err
 	}
 
 	Convey("Create a new Health Check given one good working check function to run with status code", t, func() {
@@ -64,7 +67,7 @@ func TestCreate(t *testing.T) {
 		defer hc.Stop()
 
 		hc.Tickers[0].check.mutex.Lock()
-		So(hc.Checks[0].Checker, ShouldEqual, cfok1)
+		So(hc.Checks[0].checker, ShouldEqual, cfok1)
 		hc.Tickers[0].check.mutex.Unlock()
 
 		So(err, ShouldBeNil)
@@ -79,9 +82,8 @@ func TestCreate(t *testing.T) {
 		Convey("After check function has run, ensure it has correctly stored the results", func() {
 			time.Sleep(2 * interval)
 			hc.Tickers[0].check.mutex.Lock()
-			checkResponse := hc.Tickers[0].check.State
+			So(hc.Tickers[0].check.state, ShouldResemble, &healthyCheck1)
 			hc.Tickers[0].check.mutex.Unlock()
-			So(checkResponse, ShouldResemble, healthyCheck1)
 		})
 	})
 
@@ -93,7 +95,7 @@ func TestCreate(t *testing.T) {
 		defer hc.Stop()
 
 		hc.Tickers[0].check.mutex.Lock()
-		So(hc.Checks[0].Checker, ShouldEqual, cfok3)
+		So(hc.Checks[0].checker, ShouldEqual, cfok3)
 		hc.Tickers[0].check.mutex.Unlock()
 
 		So(err, ShouldBeNil)
@@ -109,9 +111,8 @@ func TestCreate(t *testing.T) {
 			time.Sleep(2 * interval)
 
 			hc.Tickers[0].check.mutex.Lock()
-			checkResponse := hc.Tickers[0].check.State
+			So(hc.Tickers[0].check.state, ShouldResemble, &healthyCheck3)
 			hc.Tickers[0].check.mutex.Unlock()
-			So(checkResponse, ShouldResemble, healthyCheck3)
 		})
 	})
 
@@ -123,7 +124,7 @@ func TestCreate(t *testing.T) {
 		defer hc.Stop()
 
 		hc.Tickers[0].check.mutex.Lock()
-		So(hc.Checks[0].Checker, ShouldEqual, cfok1)
+		So(hc.Checks[0].checker, ShouldEqual, cfok1)
 		hc.Tickers[0].check.mutex.Unlock()
 
 		So(err, ShouldBeNil)
@@ -140,9 +141,8 @@ func TestCreate(t *testing.T) {
 			time.Sleep(2 * interval)
 
 			hc.Tickers[0].check.mutex.Lock()
-			checkResponse := hc.Tickers[0].check.State
+			So(hc.Tickers[0].check.state, ShouldResemble, &healthyCheck1)
 			hc.Tickers[0].check.mutex.Unlock()
-			So(checkResponse, ShouldResemble, healthyCheck1)
 		})
 	})
 
@@ -154,11 +154,11 @@ func TestCreate(t *testing.T) {
 		defer hc.Stop()
 
 		hc.Tickers[0].check.mutex.Lock()
-		So(hc.Checks[0].Checker, ShouldEqual, cfok2)
+		So(hc.Checks[0].checker, ShouldEqual, cfok2)
 		hc.Tickers[0].check.mutex.Unlock()
 
 		hc.Tickers[1].check.mutex.Lock()
-		So(hc.Checks[1].Checker, ShouldEqual, cfok3)
+		So(hc.Checks[1].checker, ShouldEqual, cfok3)
 		hc.Tickers[1].check.mutex.Unlock()
 
 		So(err, ShouldBeNil)
@@ -174,14 +174,12 @@ func TestCreate(t *testing.T) {
 			time.Sleep(2 * interval)
 
 			hc.Tickers[0].check.mutex.Lock()
-			checkResponse1 := hc.Tickers[0].check.State
+			So(hc.Tickers[0].check.state, ShouldResemble, &healthyCheck2)
 			hc.Tickers[0].check.mutex.Unlock()
-			So(checkResponse1, ShouldResemble, healthyCheck2)
 
 			hc.Tickers[1].check.mutex.Lock()
-			checkResponse2 := hc.Tickers[1].check.State
+			So(hc.Tickers[1].check.state, ShouldResemble, &healthyCheck3)
 			hc.Tickers[1].check.mutex.Unlock()
-			So(checkResponse2, ShouldResemble, healthyCheck3)
 		})
 	})
 
@@ -213,7 +211,11 @@ func TestCreate(t *testing.T) {
 		So(err, ShouldBeNil)
 		Convey("After check function has run, ensure it has correctly stored the results", func() {
 			time.Sleep(2 * interval)
-			So(hc.Tickers[0].check.State, ShouldBeNil)
+
+			hc.Tickers[0].check.mutex.Lock()
+			So(hc.Tickers[0].check.state, ShouldResemble, &CheckState{})
+			hc.Tickers[0].check.mutex.Unlock()
+
 		})
 	})
 
@@ -226,7 +228,7 @@ func TestCreate(t *testing.T) {
 	Convey("Given a Health Check with a cancellable context", t, func() {
 		ctx, cancel := context.WithCancel(context.Background())
 		hc, err := Create(version, criticalTimeout, interval, cfFail)
-		hc.Checks[0].State = getTestCheck("cancellable testing")
+		*hc.Checks[0].state = generateTestState("cancellable testing")
 		hc.Start(ctx)
 		// no `defer hc.Stop()` because of `cancel()`
 
@@ -237,7 +239,7 @@ func TestCreate(t *testing.T) {
 			time.Sleep(2 * interval)
 
 			So(len(hc.Tickers), ShouldEqual, 1)
-			So(hc.Tickers[0].check.State, ShouldPointTo, hc.Checks[0].State)
+			So(hc.Tickers[0].check.state, ShouldPointTo, hc.Checks[0].state)
 			So(hc.Tickers[0].isStopping(), ShouldBeFalse)
 
 			cancel()
@@ -252,7 +254,7 @@ func TestCreate(t *testing.T) {
 	Convey("Create a new Health Check given 1 successful check followed by a broken run check", t, func() {
 		ctx := context.Background()
 		hc, err := Create(version, criticalTimeout, interval, cfFail)
-		hc.Checks[0].State = healthyCheck1
+		*hc.Checks[0].state = healthyCheck1
 		hc.Start(ctx)
 		defer hc.Stop()
 
@@ -262,16 +264,15 @@ func TestCreate(t *testing.T) {
 			time.Sleep(2 * interval)
 
 			hc.Tickers[0].check.mutex.Lock()
-			checkResponse := hc.Tickers[0].check.State
+			So(hc.Tickers[0].check.state, ShouldResemble, &healthyCheck1)
 			hc.Tickers[0].check.mutex.Unlock()
-			So(checkResponse, ShouldResemble, healthyCheck1)
 		})
 	})
 }
 
 func TestAddCheck(t *testing.T) {
-	cf := func(ctx context.Context) (*CheckState, error) {
-		return &CheckState{}, nil
+	cf := func(ctx context.Context, state *CheckState) error {
+		return nil
 	}
 
 	Convey("Given a Health Check without any registered checks", t, func() {
