@@ -1,121 +1,240 @@
 dp-healthcheck
-================
+==============
 
-A health check git repository for DP
+A health check git repository for Digital Publishing that implements the [Health Check Specification](https://github.com/ONSdigital/dp/blob/master/standards/HEALTH_CHECK_SPECIFICATION.md).  All Digital Publishing apps must implement a health check using this library.  Functions that implement the `Checker` type are registered with the library which will check internal and external measures of the apps health.  The library will then call these functions periodically to determine the overall health of the app and report this back using the included handler.
 
-### Getting started
+Getting started
+---------------
 
-Read the [Health Check Specification](https://github.com/ONSdigital/dp/blob/master/standards/HEALTH_CHECK_SPECIFICATION.md) for details.
+* [Add health check to an app](#adding-a-health-check-to-an-app)
+* [Implementing a `Checker` function](#implementing-a-checker)
 
-#### How to use
-1. Add Health Check library to an app
+Adding a health check to an app
+-------------------------------
 
-2. Create an array of Health Check clients by calling `NewClient()` passing in the following:
+1. Import the library and your HTTP server dependencies:
 
-- An optional RCHTTP clienter; if none is provided one will be created
-- A function that implements the `Checker` interface
+    ```
+    package main
 
-3. Call `Create()` passing in the following:
-
-- Versioning Information
-- Critical time duration; time to wait for dependent apps critical unhealthy status to make current app unhealthy- Time Interval to run health checks on dependencies
-- Clients; An array of clients created in the previous step, like so:
-
-```
-package main
-
-import (
-    ...
-    health "github.com/ONSdigital/dp-healthcheck/healthcheck"
-    ...
-)
-...
-var BuildTime, GitCommit, Version string
-...
-
-func main() {
-    ...
-
-    criticalTimeout := time.Minute
-    interval := 10 * time.Second
-
-    versionInfo := health.CreateVersionInfo(
-        time.Unix(BuildTime, 0),
-        GitCommit,
-        Version,
+    import (
+        ...
+        health "github.com/ONSdigital/dp-healthcheck/healthcheck"
+        "github.com/ONSdigital/go-ns/server"
+        "github.com/gorilla/mux"
+        ...
     )
+    ```
 
-    # Initialise your clients
-    cli1 := client1.NewAPIClient()
-    cli2 := client2.NewDataStoreClient()
+2. Create a version object defining the version of your app:
 
-    hc := health.Create(versionInfo criticalTimeout, interval, &cli1.Checker, &cli2.Checker)
-
+    ```
     ...
-}
-```
 
-4. Optionally call `AddClient` on the healthcheck to add additional clients, note this can only be done prior to `Start()` being called
-
-```
+    var BuildTime, GitCommit, Version string
+    const criticalTimeout = time.Minute
+    const interval = 10 * time.Second
     ...
-    mongoClient := <mongo health client>
 
-    if err = hc.AddCheck(&mongoClient.Checker); err != nil {
+    func main() {
+        ctx := context.Context(context.Background())
+        ...
+
+        versionInfo := health.CreateVersionInfo(
+            time.Unix(BuildTime, 0),
+            GitCommit,
+            Version,
+        )
+
+        ...
+    ```
+
+2. Initialise any clients that have `Checker` type functions you wish to use
+
+3. Instantiate the health check library:
+
+    If you have only have a few `Checker` functions to register you can pass them in to Create:
+
+    ```
+        ...
+
+        hc, err := health.Create(versionInfo criticalTimeout, interval, CheckFunc1, CheckFunc2, someClient.Check)
+        if err != nil {
+            ...
+        }
+
+        ...
+    ```
+
+    If you don't have any `Checker` functions to register or you have too many to register inline then:
+
+    ```
+        ...
+
+        hc, err := health.Create(versionInfo criticalTimeout, interval)
+        if err != nil {
+            ...
+        }
+        if err = hc.AddCheck(CheckFunc1); err != nil {
+            ...
+        }
+        if err = hc.AddCheck(&mongoClient.Checker); err != nil {
+            ...
+        }
+
+        ...
+    ```
+
+    Or you can use any combination of the above.
+
+4. Register the health handler:
+
+    ```
+        ...
+
+        r := mux.NewRouter()
+        r.HandleFunc("/health", hc.Handler)
+
+        ...
+    ```
+
+5. Start the health check library:
+
+    ```
+        ...
+
+        hc.Start(ctx)
+
+        ...
+    ```
+
+6. Start the HTTP server:
+
+    ```
+        ...
+
+        s := server.New(":8080", r
+        if err := s.ListenAndServe(); err != nil {
+            ...
+        }
+
+        ...
+    ```
+
+7. Then gracefully shutdown the health check library:
+
+    ```
+        ...
+
+        hc.Stop()
+
         ...
     }
+    ```
+
+8. Set the `BuildTime`, `GitCommit` and `Version` during compile:
+
+    Command line:
+
+    ```
+    BUILD_TIME="$(date +%s)" GIT_COMMIT="$(git rev-parse HEAD)" VERSION="$(git tag --points-at HEAD | grep ^v | head -n 1)" go build -ldflags="-X 'main.BuildTime=$BUILD_TIME' -X 'main.GitCommit=$GIT_COMMIT' -X 'main.Version=$VERSION'"
+    ```
+
+    Makefile:
+
+    ```
+    ...
+    APP_NAME = app-name
+
+    BIN_DIR    ?=.
+    VERSION    ?= $(shell git tag --points-at HEAD | grep ^v | head -n 1)
+
+    BUILD_ARCH  = $(BUILD)/$(GOOS)-$(GOARCH)
+    BUILD_TIME  = $(shell date +%s)
+    GIT_COMMIT  = $(shell git rev-parse HEAD)
+
+    export GOOS   ?= $(shell go env GOOS)
+    export GOARCH ?= $(shell go env GOARCH)
+
     ...
 
-```
+    build:
+            @mkdir -p $(BUILD_ARCH)/$(BIN_DIR)
+            go build -o $(BUILD_ARCH)/$(BIN_DIR)/$(MAIN) -ldflags="-X 'main.BuildTime=$(BUILD_TIME)' -X 'main.GitCommit=$(GIT_COMMIT)' -X 'main.Version=$(VERSION)'" cmd/$(MAIN)/main.go
+
+    debug:
+            HUMAN_LOG=1 go run -race -ldflags="-X 'main.BuildTime=$(BUILD_TIME)' -X 'main.GitCommit=$(GIT_COMMIT)' -X 'main.Version=$(VERSION)'" cmd/$(MAIN)/main.go
+
+    ...
+    ```
+
 
 5. Setting the BuildTime, GitCommit and Version during compile time, using the following commands:
 
-```
-BUILD_TIME=$(date +%s)
-GIT_COMMIT=$(shell git rev-parse HEAD)
-VERSION ?= $(shell git tag --points-at HEAD | grep ^v | head -n 1)
+    ```
+    BUILD_TIME=$(date +%s)
+    GIT_COMMIT=$(shell git rev-parse HEAD)
+    VERSION ?= $(shell git tag --points-at HEAD | grep ^v | head -n 1)
 
-go build -ldflags="-X 'main.BuildTime=$BUILD_TIME' -X 'main.GitCommit=$GIT_COMMIT' -X 'main.Version=$VERSION'"`
-```
+    go build -ldflags="-X 'main.BuildTime=$BUILD_TIME' -X 'main.GitCommit=$GIT_COMMIT' -X 'main.Version=$VERSION'"`
+    ```
 
-Makefile example:
+    Makefile example:
 
-```
-...
-BUILD_TIME=$(shell date +%s)
-GIT_COMMIT=$(shell git rev-parse HEAD)
-VERSION ?= $(shell git tag --points-at HEAD | grep ^v | head -n 1)
-...
-
-build:
-        @mkdir -p $(BUILD_ARCH)/$(BIN_DIR)
-        go build -o $(BUILD_ARCH)/$(BIN_DIR)/$(MAIN) -ldflags "-X main.BuildTime=$BUILD_TIME -X main.GitCommit=$GIT_COMMIT -X main.Version=$VERSION" cmd/$(MAIN)/main.go
-debug:
-        HUMAN_LOG=1 go run -race -ldflags "-X main.BuildTime=$BUILD_TIME -X main.GitCommit=$GIT_COMMIT -X main.Version=$VERSION" cmd/$(MAIN)/main.go
-...
-```
-
-6. Call `Start()` on the healthcheck
-
-```
+    ```
     ...
-    ctx := context.Context(context.Background())
-
-    hc.Start(ctx)
+    BUILD_TIME=$(shell date +%s)
+    GIT_COMMIT=$(shell git rev-parse HEAD)
+    VERSION ?= $(shell git tag --points-at HEAD | grep ^v | head -n 1)
     ...
+
+    build:
+            @mkdir -p $(BUILD_ARCH)/$(BIN_DIR)
+            go build -o $(BUILD_ARCH)/$(BIN_DIR)/$(APP_NAME) -ldflags "-X main.BuildTime=$BUILD_TIME -X main.GitCommit=$GIT_COMMIT -X main.Version=$VERSION" cmd/$(APP_NAME)/main.go
+    debug:
+            HUMAN_LOG=1 go run -race -ldflags "-X main.BuildTime=$BUILD_TIME -X main.GitCommit=$GIT_COMMIT -X main.Version=$VERSION" cmd/$(APP_NAME)/main.go
+    ...
+    ```
+
+Implementing a checker
+----------------------
+
+Each checker measures the health of something that is required for an app to function.  This could be something internal to the app (e.g. latency, error rate, saturation, etc.) or something external (e.g. the health of an upstream app, connection to a data store, etc.).  Each checker is a function that gets the current state of whatever it is responsible for checking.
+
+Implement a checker by creating a function (with or without a receiver) that is of the `healthcheck.Checker` type.
+
+For example:
+
+```
+func Check(ctx context.Context, state *CheckState) error {
+	now := time.Now()
+
+	if state.Name == "" {
+		state.Name = "check name"
+	}
+
+	success := rand.Float32() < 0.5
+	warn := rand.Float32() < 0.5
+
+	if success {
+		state.Status = health.StatusOK
+		state.Message = "I'm OK"
+		state.LastSuccess = &now
+	} else if warn {
+		state.Status = health.StatusWarning
+		state.Message = "degraded function of ..."
+		state.LastFailure = &now
+	} else {
+		state.Status = health.StatusCritical
+		state.Message = "failed to ..."
+		state.LastFailure = &now
+	}
+	state.LastChecked = &now
+	return nil
+}
 ```
 
-7. Call `Stop()` on healthcheck to gracefully shutdown application
-
-```
-    ...
-    hc.Stop()
-    ...
-```
-
-### Configuration
-
-Configuration of the health check takes place via arguments passed to the `Create()` function, this includes a variable of `VersionInfo` which can be created by passing arguments to the `CreateVersionInfo()` function, see below example of setup:
+Note that the `StatusCode` field is optional and only used for HTTP based checks.
 
 ### Contributing
 
@@ -123,6 +242,6 @@ See [CONTRIBUTING](CONTRIBUTING.md) for details.
 
 ### License
 
-Copyright © 2019, Office for National Statistics (https://www.ons.gov.uk)
+Copyright © 2019-2020, Office for National Statistics (https://www.ons.gov.uk)
 
 Released under MIT license, see [LICENSE](LICENSE.md) for details.
