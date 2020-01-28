@@ -17,7 +17,7 @@ func (hc *HealthCheck) Handler(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 
 	hc.Status = hc.getStatus(ctx)
-	hc.Uptime = now.Sub(hc.StartTime)
+	hc.Uptime = now.Sub(hc.StartTime) / time.Millisecond
 
 	b, err := json.Marshal(hc)
 	if err != nil {
