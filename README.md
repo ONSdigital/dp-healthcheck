@@ -46,6 +46,12 @@ Adding a health check to an app
 
         ...
 
+        // Likely these values would come from your app's config
+        criticalTimeout := time.Minute
+        interval := 10 * time.Second
+
+        ...
+
         versionInfo := health.CreateVersionInfo(
             BuildTime,
             GitCommit,
@@ -212,35 +218,25 @@ Implement a checker by creating a function (with or without a receiver) that is 
 For example:
 
 ```
+
+const checkName = "check name"
+
 func Check(ctx context.Context, state *CheckState) error {
-	now := time.Now()
-
-	if state.Name == "" {
-		state.Name = "check name"
-	}
-
 	success := rand.Float32() < 0.5
 	warn := rand.Float32() < 0.5
 
 	if success {
-		state.Status = health.StatusOK
-		state.Message = "I'm OK"
-		state.LastSuccess = &now
+        state.Update(checkName, health.StatusOK, "I'm OK", 200)
 	} else if warn {
-		state.Status = health.StatusWarning
-		state.Message = "degraded function of ..."
-		state.LastFailure = &now
+        state.Update(checkName, health.StatusWarning, "degraded function of ...", 0)
 	} else {
-		state.Status = health.StatusCritical
-		state.Message = "failed to ..."
-		state.LastFailure = &now
+        state.Update(checkName, health.StatusWarning, "failed to ...", 503)
 	}
-	state.LastChecked = &now
 	return nil
 }
 ```
 
-Note that the `StatusCode` field is optional and only used for HTTP based checks.
+Note that the `statusCode` argument (last argument) to `CheckState.Update()` is only used for HTTP based checks.  If you do not have a status code then pass `0` as seen in the example above (degraded state/warning block).
 
 ### Contributing
 

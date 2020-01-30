@@ -44,13 +44,11 @@ func (ticker *ticker) start(ctx context.Context) {
 
 // runCheck runs a checker function of the check associated with the ticker
 func (ticker *ticker) runCheck(ctx context.Context) {
-	ticker.check.mutex.Lock()
-	defer ticker.check.mutex.Unlock()
 	err := ticker.check.checker(ctx, ticker.check.state)
 	if err != nil {
 		name := "no check has been made yet"
 		if ticker.check.state != nil {
-			name = ticker.check.state.Name
+			name = ticker.check.state.Name()
 		}
 		log.Event(nil, "failed", log.Error(err), log.Data{"external_service": name})
 		return

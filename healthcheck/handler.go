@@ -67,10 +67,7 @@ func (hc *HealthCheck) isAppHealthy() string {
 
 // getCheckStatus returns a string for the status on if an individual check
 func (hc *HealthCheck) getCheckStatus(c *Check) string {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
-	switch c.state.Status {
+	switch c.state.Status() {
 	case StatusOK:
 		return StatusOK
 	case StatusWarning:
@@ -81,9 +78,9 @@ func (hc *HealthCheck) getCheckStatus(c *Check) string {
 		status := StatusWarning
 
 		// last success or minTime if nil. c should not be muted.
-		lastSuccess := &minTime
-		if c.state.LastSuccess != nil {
-			lastSuccess = c.state.LastSuccess
+		lastSuccess := c.state.LastSuccess()
+		if lastSuccess == nil {
+			lastSuccess = &minTime
 		}
 
 		// Global state will be considered critical if check has been critical for longer
