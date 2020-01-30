@@ -32,16 +32,22 @@ Adding a health check to an app
     ...
 
     var BuildTime, GitCommit, Version string
-    const criticalTimeout = time.Minute
-    const interval = 10 * time.Second
+
     ...
 
     func main() {
         ctx := context.Context(context.Background())
+
+        ...
+
+        // Likely these values would come from your app's config
+        criticalTimeout := time.Minute
+        interval := 10 * time.Second
+
         ...
 
         versionInfo := health.CreateVersionInfo(
-            time.Unix(BuildTime, 0),
+            BuildTime,
             GitCommit,
             Version,
         )
