@@ -86,7 +86,8 @@ func (hc *HealthCheck) getCheckStatus(c *Check) string {
 			lastSuccess = c.state.LastSuccess
 		}
 
-		// Global state will be considered critical if check has been critical for longer than the first critical error since last success and the timeout has expired.
+		// Global state will be considered critical if check has been critical for longer
+		// than the first critical error since last success and the timeout has expired.
 		criticalTimeThreshold := hc.TimeOfFirstCriticalError.Add(hc.CriticalErrorTimeout)
 		if lastSuccess.Before(hc.TimeOfFirstCriticalError) && now.After(criticalTimeThreshold) {
 			status = StatusCritical
