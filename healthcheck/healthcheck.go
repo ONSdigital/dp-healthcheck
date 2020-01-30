@@ -12,16 +12,16 @@ const language = "go"
 
 // HealthCheck represents the app's health check, including its component checks
 type HealthCheck struct {
-	Status                   string        `json:"status"`
-	Version                  VersionInfo   `json:"version"`
-	Uptime                   time.Duration `json:"uptime"`
-	StartTime                time.Time     `json:"start_time"`
-	Checks                   []*Check      `json:"checks"`
-	Started                  bool          `json:"-"`
-	Interval                 time.Duration `json:"-"`
-	CriticalErrorTimeout     time.Duration `json:"-"`
-	TimeOfFirstCriticalError time.Time     `json:"-"`
-	Tickers                  []*ticker     `json:"-"`
+	Status                   string          `json:"status"`
+	Version                  VersionInfo     `json:"version"`
+	Uptime                   time.Duration   `json:"uptime"`
+	StartTime                time.Time       `json:"start_time"`
+	Checks                   []*Check        `json:"checks"`
+	interval                 time.Duration   `json:"-"`
+	criticalErrorTimeout     time.Duration   `json:"-"`
+	timeOfFirstCriticalError time.Time       `json:"-"`
+	tickers                  []*ticker       `json:"-"`
+	context                  context.Context `json:"-"`
 }
 
 // VersionInfo represents the version information of an app
@@ -39,15 +39,12 @@ type VersionInfo struct {
 // interval in which to check health of dependencies
 // checkers which implement the checker interface and can run a checkup to determine the health of the app and/or its dependencies
 func Create(version VersionInfo, criticalTimeout, interval time.Duration, checkers ...Checker) (HealthCheck, error) {
-
-	var checks []*Check
-
 	hc := HealthCheck{
-		Started:              false,
-		Checks:               checks,
+		Checks:               []*Check{},
 		Version:              version,
-		CriticalErrorTimeout: criticalTimeout,
-		Interval:             interval,
+		criticalErrorTimeout: criticalTimeout,
+		interval:             interval,
+		tickers:              []*ticker{},
 	}
 
 	for _, checker := range checkers {
@@ -82,10 +79,6 @@ func CreateVersionInfo(buildTime, gitCommit, version string) (VersionInfo, error
 
 // AddCheck adds a provided checker to the health check
 func (hc *HealthCheck) AddCheck(checker Checker) (err error) {
-	if hc.Started {
-		return errors.New("unable to add new check, health check has already started")
-	}
-
 	check, err := newCheck(checker)
 	if err != nil {
 		return err
@@ -93,33 +86,29 @@ func (hc *HealthCheck) AddCheck(checker Checker) (err error) {
 
 	hc.Checks = append(hc.Checks, check)
 
-	return nil
-}
+	ticker := createTicker(hc.interval, check)
+	hc.tickers = append(hc.tickers, ticker)
 
-// newTickers returns an array of tickers based on the number of checks in the checks parameter.
-// Each check is executed at the given interval also passed into the function
-func newTickers(interval time.Duration, checks []*Check) []*ticker {
-	var tickers []*ticker
-	for _, check := range checks {
-		tickers = append(tickers, createTicker(interval, check))
+	if hc.context != nil {
+		ticker.start(hc.context)
 	}
-	return tickers
+
+	return nil
 }
 
 // Start begins each ticker, this is used to run the health checks on dependent apps
 // takes argument context and should utilise contextWithCancel
 func (hc *HealthCheck) Start(ctx context.Context) {
-	hc.Started = true
-	hc.Tickers = newTickers(hc.Interval, hc.Checks)
+	hc.context = ctx
 	hc.StartTime = time.Now().UTC()
-	for _, ticker := range hc.Tickers {
+	for _, ticker := range hc.tickers {
 		ticker.start(ctx)
 	}
 }
 
 // Stop will cancel all tickers and thus stop all health checks
 func (hc *HealthCheck) Stop() {
-	for _, ticker := range hc.Tickers {
+	for _, ticker := range hc.tickers {
 		ticker.stop()
 	}
 }

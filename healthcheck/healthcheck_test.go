@@ -68,14 +68,14 @@ func TestCreate(t *testing.T) {
 		So(hc.Version.LanguageVersion, ShouldEqual, "1.12")
 		So(hc.Version.Version, ShouldEqual, "1.0.0")
 		So(hc.StartTime, ShouldHappenBetween, timeBeforeCreation, time.Now().UTC())
-		So(hc.CriticalErrorTimeout, ShouldEqual, criticalTimeout)
-		So(len(hc.Tickers), ShouldEqual, 1)
+		So(hc.criticalErrorTimeout, ShouldEqual, criticalTimeout)
+		So(len(hc.tickers), ShouldEqual, 1)
 		Convey("After check function should have run, ensure the check state has updated", func() {
 			time.Sleep(2 * interval)
 
-			hc.Tickers[0].check.state.mutex.RLock()
-			So(*hc.Tickers[0].check.state.LastChecked(), ShouldHappenOnOrBetween, timeBeforeCreation, time.Now().UTC())
-			hc.Tickers[0].check.state.mutex.RUnlock()
+			hc.tickers[0].check.state.mutex.RLock()
+			So(*hc.tickers[0].check.state.LastChecked(), ShouldHappenOnOrBetween, timeBeforeCreation, time.Now().UTC())
+			hc.tickers[0].check.state.mutex.RUnlock()
 		})
 	})
 
@@ -95,18 +95,18 @@ func TestCreate(t *testing.T) {
 		So(hc.Version.LanguageVersion, ShouldEqual, "1.12")
 		So(hc.Version.Version, ShouldEqual, "1.0.0")
 		So(hc.StartTime, ShouldHappenBetween, timeBeforeCreation, time.Now().UTC())
-		So(hc.CriticalErrorTimeout, ShouldEqual, criticalTimeout)
-		So(len(hc.Tickers), ShouldEqual, 2)
+		So(hc.criticalErrorTimeout, ShouldEqual, criticalTimeout)
+		So(len(hc.tickers), ShouldEqual, 2)
 		Convey("After the check functions should have run, ensure both check states have updated", func() {
 			time.Sleep(2 * interval)
 
-			hc.Tickers[0].check.state.mutex.RLock()
-			So(*hc.Tickers[0].check.state.LastChecked(), ShouldHappenOnOrBetween, timeBeforeCreation, time.Now().UTC())
-			hc.Tickers[0].check.state.mutex.RUnlock()
+			hc.tickers[0].check.state.mutex.RLock()
+			So(*hc.tickers[0].check.state.LastChecked(), ShouldHappenOnOrBetween, timeBeforeCreation, time.Now().UTC())
+			hc.tickers[0].check.state.mutex.RUnlock()
 
-			hc.Tickers[1].check.state.mutex.RLock()
-			So(*hc.Tickers[1].check.state.LastChecked(), ShouldHappenOnOrBetween, timeBeforeCreation, time.Now().UTC())
-			hc.Tickers[1].check.state.mutex.RUnlock()
+			hc.tickers[1].check.state.mutex.RLock()
+			So(*hc.tickers[1].check.state.LastChecked(), ShouldHappenOnOrBetween, timeBeforeCreation, time.Now().UTC())
+			hc.tickers[1].check.state.mutex.RUnlock()
 		})
 	})
 
@@ -124,9 +124,9 @@ func TestCreate(t *testing.T) {
 		So(hc.Version.LanguageVersion, ShouldEqual, "1.12")
 		So(hc.Version.Version, ShouldEqual, "1.0.0")
 		So(hc.StartTime, ShouldHappenBetween, timeBeforeCreation, time.Now().UTC())
-		So(hc.CriticalErrorTimeout, ShouldEqual, criticalTimeout)
+		So(hc.criticalErrorTimeout, ShouldEqual, criticalTimeout)
 		So(len(hc.Checks), ShouldEqual, 0)
-		So(len(hc.Tickers), ShouldEqual, 0)
+		So(len(hc.tickers), ShouldEqual, 0)
 	})
 
 	Convey("Create a new Health Check given a broken check function", t, func() {
@@ -139,9 +139,9 @@ func TestCreate(t *testing.T) {
 		Convey("After check function has run, ensure it has correctly stored the results", func() {
 			time.Sleep(2 * interval)
 
-			hc.Tickers[0].check.state.mutex.RLock()
-			s := *hc.Tickers[0].check.state
-			hc.Tickers[0].check.state.mutex.RUnlock()
+			hc.tickers[0].check.state.mutex.RLock()
+			s := *hc.tickers[0].check.state
+			hc.tickers[0].check.state.mutex.RUnlock()
 
 			s.mutex = nil
 			So(s, ShouldResemble, CheckState{})
@@ -161,20 +161,20 @@ func TestCreate(t *testing.T) {
 		// no `defer hc.Stop()` because of `cancel()`
 
 		So(err, ShouldBeNil)
-		So(hc.Started, ShouldBeTrue)
+		So(hc.context, ShouldNotBeNil)
 
 		Convey("When the check function has time to run, and the context is cancelled", func() {
 			time.Sleep(2 * interval)
 
-			So(len(hc.Tickers), ShouldEqual, 1)
-			So(hc.Tickers[0].check.state, ShouldPointTo, hc.Checks[0].state)
-			So(hc.Tickers[0].isStopping(), ShouldBeFalse)
+			So(len(hc.tickers), ShouldEqual, 1)
+			So(hc.tickers[0].check.state, ShouldPointTo, hc.Checks[0].state)
+			So(hc.tickers[0].isStopping(), ShouldBeFalse)
 
 			cancel()
 
 			Convey("Then the tickers are stopped/stopping", func() {
 				time.Sleep(2 * interval)
-				So(hc.Tickers[0].isStopping(), ShouldBeTrue)
+				So(hc.tickers[0].isStopping(), ShouldBeTrue)
 			})
 		})
 	})
@@ -209,7 +209,7 @@ func TestCreate(t *testing.T) {
 			So(hc.Checks[0].state.statusCode, ShouldEqual, statusCode)
 			So(hc.Checks[0].state.lastChecked, ShouldEqual, &now)
 			So(hc.Checks[0].state.lastSuccess, ShouldEqual, &now)
-			hc.Tickers[0].check.state.mutex.RUnlock()
+			hc.tickers[0].check.state.mutex.RUnlock()
 		})
 	})
 }
@@ -233,7 +233,7 @@ func TestAddCheck(t *testing.T) {
 			defer hc.Stop()
 
 			time.Sleep(2 * interval)
-			So(len(hc.Tickers), ShouldEqual, 1)
+			So(len(hc.tickers), ShouldEqual, 1)
 		})
 	})
 
@@ -251,7 +251,7 @@ func TestAddCheck(t *testing.T) {
 			defer hc.Stop()
 
 			time.Sleep(2 * interval)
-			So(len(hc.Tickers), ShouldEqual, 2)
+			So(len(hc.tickers), ShouldEqual, 2)
 		})
 	})
 
@@ -261,13 +261,13 @@ func TestAddCheck(t *testing.T) {
 		defer hc.Stop()
 
 		So(err, ShouldBeNil)
-		origNumberOfTickers := len(hc.Tickers)
-		Convey("When you add another check - too late", func() {
+		origNumberOftickers := len(hc.tickers)
+		Convey("When you add another check", func() {
 			err := hc.AddCheck(cf)
-			Convey("Then there should be no increase in the number of tickers", func() {
-				So(err, ShouldNotBeNil)
-				time.Sleep(2 * interval)
-				So(len(hc.Tickers), ShouldEqual, origNumberOfTickers)
+			time.Sleep(2 * interval)
+			Convey("Then the number of tickers should increase by one", func() {
+				So(err, ShouldBeNil)
+				So(len(hc.tickers), ShouldEqual, origNumberOftickers + 1)
 			})
 		})
 	})
@@ -286,7 +286,7 @@ func TestAddCheck(t *testing.T) {
 			defer hc.Stop()
 
 			time.Sleep(2 * interval)
-			So(len(hc.Tickers), ShouldEqual, 0)
+			So(len(hc.tickers), ShouldEqual, 0)
 		})
 	})
 }
