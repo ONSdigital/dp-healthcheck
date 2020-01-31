@@ -26,7 +26,7 @@ Adding a health check to an app
     )
     ```
 
-2. Create a version object defining the version of your app:
+2. Create a new version object defining the version of your app:
 
     ```
     ...
@@ -52,7 +52,7 @@ Adding a health check to an app
 
         ...
 
-        versionInfo := health.CreateVersionInfo(
+        versionInfo := health.NewVersionInfo(
             BuildTime,
             GitCommit,
             Version,
@@ -65,21 +65,6 @@ Adding a health check to an app
 
 3. Instantiate the health check library:
 
-    If you have only have a few `Checker` functions to register you can pass them in to Create:
-
-    ```
-        ...
-
-        hc, err := health.New(versionInfo criticalTimeout, interval, CheckFunc1, CheckFunc2, someClient.Check)
-        if err != nil {
-            ...
-        }
-
-        ...
-    ```
-
-    If you don't have any `Checker` functions to register or you have too many to register inline then:
-
     ```
         ...
 
@@ -87,19 +72,26 @@ Adding a health check to an app
         if err != nil {
             ...
         }
-        if err = hc.AddCheck(CheckFunc1); err != nil {
+
+        ...
+    ```
+
+4. Register your `Checker` functions providing a short human readable name for each (it is best to try to keep the name consistent between apps where possible):
+
+    ```
+        ...
+
+        if err = hc.AddCheck("check 1", CheckFunc1); err != nil {
             ...
         }
-        if err = hc.AddCheck(&mongoClient.Checker); err != nil {
+        if err = hc.AddCheck("mongoDB", &mongoClient.Checker); err != nil {
             ...
         }
 
         ...
     ```
 
-    Or you can use any combination of the above.
-
-4. Register the health handler:
+5. Register the health handler:
 
     ```
         ...
@@ -110,7 +102,7 @@ Adding a health check to an app
         ...
     ```
 
-5. Start the health check library:
+6. Start the health check library:
 
     ```
         ...
@@ -120,7 +112,7 @@ Adding a health check to an app
         ...
     ```
 
-6. Start the HTTP server:
+7. Start the HTTP server:
 
     ```
         ...
@@ -133,7 +125,7 @@ Adding a health check to an app
         ...
     ```
 
-7. Then gracefully shutdown the health check library:
+8. Then gracefully shutdown the health check library:
 
     ```
         ...
@@ -144,7 +136,7 @@ Adding a health check to an app
     }
     ```
 
-8. Set the `BuildTime`, `GitCommit` and `Version` during compile:
+9. Set the `BuildTime`, `GitCommit` and `Version` during compile:
 
     Command line:
 
@@ -180,34 +172,6 @@ Adding a health check to an app
     ...
     ```
 
-
-5. Setting the BuildTime, GitCommit and Version during compile time, using the following commands:
-
-    ```
-    BUILD_TIME=$(date +%s)
-    GIT_COMMIT=$(shell git rev-parse HEAD)
-    VERSION ?= $(shell git tag --points-at HEAD | grep ^v | head -n 1)
-
-    go build -ldflags="-X 'main.BuildTime=$BUILD_TIME' -X 'main.GitCommit=$GIT_COMMIT' -X 'main.Version=$VERSION'"`
-    ```
-
-    Makefile example:
-
-    ```
-    ...
-    BUILD_TIME=$(shell date +%s)
-    GIT_COMMIT=$(shell git rev-parse HEAD)
-    VERSION ?= $(shell git tag --points-at HEAD | grep ^v | head -n 1)
-    ...
-
-    build:
-            @mkdir -p $(BUILD_ARCH)/$(BIN_DIR)
-            go build -o $(BUILD_ARCH)/$(BIN_DIR)/$(APP_NAME) -ldflags "-X main.BuildTime=$BUILD_TIME -X main.GitCommit=$GIT_COMMIT -X main.Version=$VERSION" cmd/$(APP_NAME)/main.go
-    debug:
-            HUMAN_LOG=1 go run -race -ldflags "-X main.BuildTime=$BUILD_TIME -X main.GitCommit=$GIT_COMMIT -X main.Version=$VERSION" cmd/$(APP_NAME)/main.go
-    ...
-    ```
-
 Implementing a checker
 ----------------------
 
@@ -218,19 +182,16 @@ Implement a checker by creating a function (with or without a receiver) that is 
 For example:
 
 ```
-
-const checkName = "check name"
-
 func Check(ctx context.Context, state *CheckState) error {
 	success := rand.Float32() < 0.5
 	warn := rand.Float32() < 0.5
 
 	if success {
-        state.Update(checkName, health.StatusOK, "I'm OK", 200)
+        state.Update(health.StatusOK, "I'm OK", 200)
 	} else if warn {
-        state.Update(checkName, health.StatusWarning, "degraded function of ...", 0)
+        state.Update(health.StatusWarning, "degraded function of ...", 0)
 	} else {
-        state.Update(checkName, health.StatusWarning, "failed to ...", 503)
+        state.Update(health.StatusWarning, "failed to ...", 503)
 	}
 	return nil
 }

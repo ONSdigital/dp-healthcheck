@@ -774,7 +774,6 @@ func TestHandlerMultipleChecks(t *testing.T) {
 
 func createATestCheck(stateToReturn CheckState, hasPreviousCheck bool) *Check {
 	checkerFunc := func(ctx context.Context, state *CheckState) error {
-		state.name = stateToReturn.name
 		state.status = stateToReturn.status
 		state.message = stateToReturn.message
 		state.statusCode = stateToReturn.statusCode
@@ -783,9 +782,8 @@ func createATestCheck(stateToReturn CheckState, hasPreviousCheck bool) *Check {
 		state.lastFailure = stateToReturn.lastFailure
 		return nil
 	}
-	check, _ := NewCheck(checkerFunc)
+	check, _ := NewCheck(stateToReturn.name, checkerFunc)
 	if hasPreviousCheck {
-		check.state.name = stateToReturn.name
 		check.state.status = stateToReturn.status
 		check.state.message = stateToReturn.message
 		check.state.statusCode = stateToReturn.statusCode

@@ -37,30 +37,21 @@ type VersionInfo struct {
 // version information of the app,
 // criticalTimeout for how long to wait until an unhealthy dependent propagates its state to make this app unhealthy
 // interval in which to check health of dependencies
-// checkers which implement the checker interface and can run a checkup to determine the health of the app and/or its dependencies
-func New(version VersionInfo, criticalTimeout, interval time.Duration, checkers ...Checker) (HealthCheck, error) {
-	hc := HealthCheck{
+func New(version VersionInfo, criticalTimeout, interval time.Duration) HealthCheck {
+	return HealthCheck{
 		Checks:               []*Check{},
 		Version:              version,
 		criticalErrorTimeout: criticalTimeout,
 		interval:             interval,
 		tickers:              []*ticker{},
 	}
-
-	for _, checker := range checkers {
-		if err := hc.AddCheck(checker); err != nil {
-			return hc, err
-		}
-	}
-
-	return hc, nil
 }
 
-// CreateVersionInfo returns a health check version info object. Caller to provide:
+// NewVersionInfo returns a health check version info object. Caller to provide:
 // buildTime for when the app was built as a unix time stamp in string form
 // gitCommit the SHA-1 commit hash of the built app
 // version the semantic version of the built app
-func CreateVersionInfo(buildTime, gitCommit, version string) (VersionInfo, error) {
+func NewVersionInfo(buildTime, gitCommit, version string) (VersionInfo, error) {
 	versionInfo := VersionInfo{
 		BuildTime:       time.Unix(0, 0),
 		GitCommit:       gitCommit,
@@ -78,8 +69,8 @@ func CreateVersionInfo(buildTime, gitCommit, version string) (VersionInfo, error
 }
 
 // AddCheck adds a provided checker to the health check
-func (hc *HealthCheck) AddCheck(checker Checker) (err error) {
-	check, err := NewCheck(checker)
+func (hc *HealthCheck) AddCheck(name string, checker Checker) (err error) {
+	check, err := NewCheck(name, checker)
 	if err != nil {
 		return err
 	}

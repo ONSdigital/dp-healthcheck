@@ -19,11 +19,11 @@ func TestCreateNew(t *testing.T) {
 		err   error
 	)
 	Convey("Create a new check", t, func() {
-		check, _ = NewCheck(checkerFunc)
+		check, _ = NewCheck("check", checkerFunc)
 		So(err, ShouldBeNil)
 		So(check.checker, ShouldEqual, checkerFunc)
 		So(check.state.mutex, ShouldNotBeNil)
-		So(check.state.name, ShouldEqual, "")
+		So(check.state.name, ShouldEqual, "check")
 		So(check.state.status, ShouldEqual, "")
 		So(check.state.statusCode, ShouldEqual, 0)
 		So(check.state.message, ShouldEqual, "")
@@ -32,13 +32,13 @@ func TestCreateNew(t *testing.T) {
 		So(check.state.lastFailure, ShouldBeNil)
 	})
 	Convey("A second new check shares the right values", t, func() {
-		check2, err := NewCheck(checkerFunc)
+		check2, err := NewCheck("check 2", checkerFunc)
 		So(err, ShouldBeNil)
 		So(check2.checker, ShouldEqual, check.checker)
 		So(check2.state.mutex, ShouldNotPointTo, check.state.mutex)
 	})
 	Convey("Fail to create a new check as checker given is nil", t, func() {
-		check3, err := NewCheck(nil)
+		check3, err := NewCheck("nil check", nil)
 		So(check3, ShouldBeNil)
 		So(err, ShouldNotBeNil)
 	})
@@ -54,12 +54,12 @@ func TestUpdate(t *testing.T) {
 	Convey("Given a new check state", t, func() {
 		before := time.Now().UTC()
 
-		state := &CheckState{
-			mutex: &sync.RWMutex{},
-		}
+		state := NewCheckState(checkName)
+
+		So(state.name, ShouldEqual, checkName)
 
 		Convey("When the state is updated with OK status", func() {
-			err := state.Update(checkName, StatusOK, okMessage, 200)
+			err := state.Update(StatusOK, okMessage, 200)
 			So(err, ShouldBeNil)
 
 			Convey("Then the check state should be set accordingly", func() {
@@ -78,12 +78,12 @@ func TestUpdate(t *testing.T) {
 	Convey("Given a new check state", t, func() {
 		before := time.Now().UTC()
 
-		state := &CheckState{
-			mutex: &sync.RWMutex{},
-		}
+		state := NewCheckState(checkName)
+
+		So(state.name, ShouldEqual, checkName)
 
 		Convey("When the state is updated with warning status", func() {
-			err := state.Update(checkName, StatusWarning, failMessage, 200)
+			err := state.Update(StatusWarning, failMessage, 200)
 			So(err, ShouldBeNil)
 
 			Convey("Then the check state should be set accordingly", func() {
@@ -102,12 +102,12 @@ func TestUpdate(t *testing.T) {
 	Convey("Given a new check state with valid existing state", t, func() {
 		before := time.Now().UTC()
 
-		state := &CheckState{
-			mutex: &sync.RWMutex{},
-		}
+		state := NewCheckState(checkName)
+
+		So(state.name, ShouldEqual, checkName)
 
 		Convey("When the state is updated with critical status", func() {
-			err := state.Update(checkName, StatusCritical, failMessage, 502)
+			err := state.Update(StatusCritical, failMessage, 502)
 			So(err, ShouldBeNil)
 
 			Convey("Then the check state should be set accordingly", func() {
@@ -126,10 +126,9 @@ func TestUpdate(t *testing.T) {
 	Convey("Given a new check state", t, func() {
 		before := time.Now().UTC()
 
-		state := &CheckState{
-			mutex: &sync.RWMutex{},
-		}
-		err := state.Update(checkName, StatusOK, okMessage, 200)
+		state := NewCheckState(checkName)
+
+		err := state.Update(StatusOK, okMessage, 200)
 		So(err, ShouldBeNil)
 
 		after := time.Now().UTC()
@@ -143,7 +142,7 @@ func TestUpdate(t *testing.T) {
 
 		Convey("When the state is updated with another state", func() {
 			before2 := time.Now().UTC()
-			err := state.Update(checkName, StatusCritical, failMessage, 0)
+			err := state.Update(StatusCritical, failMessage, 0)
 			So(err, ShouldBeNil)
 
 			Convey("Then then only the changed fields should overwitten", func() {
@@ -161,32 +160,13 @@ func TestUpdate(t *testing.T) {
 	})
 
 	Convey("Given a new check state with valid existing state", t, func() {
-		state := &CheckState{
-			mutex: &sync.RWMutex{},
-		}
+		state := NewCheckState(checkName)
 
 		Convey("When the state is updated with an invalid status", func() {
-			err := state.Update(checkName, "some invalid status", failMessage, 502)
+			err := state.Update("some invalid status", failMessage, 502)
 
 			Convey("Then an error should be returned", func() {
 				So(err, ShouldNotBeNil)
-			})
-		})
-	})
-
-	Convey("Given a new check state with an existing name", t, func() {
-		state := &CheckState{
-			name:  checkName,
-			mutex: &sync.RWMutex{},
-		}
-		So(state.name, ShouldEqual, checkName)
-
-		Convey("When the state is updated", func() {
-			err := state.Update("a new name", StatusOK, okMessage, 0)
-			So(err, ShouldBeNil)
-
-			Convey("Then the name should not be changed", func() {
-				So(state.name, ShouldEqual, checkName)
 			})
 		})
 	})
@@ -298,30 +278,32 @@ func TestGets(t *testing.T) {
 
 func TestJSONMarshalling(t *testing.T) {
 	Convey("Given a new check with a populated state", t, func() {
-		t := time.Unix(0, 0).UTC()
+		t0 := time.Unix(0, 0).UTC()
+		t1 := t0.Add(1 * time.Minute)
+		t2 := t0.Add(2 * time.Minute)
+		t3 := t0.Add(3 * time.Minute)
 		checkerFunc := func(ctx context.Context, state *CheckState) error {
 			return nil
 		}
-		check, err := NewCheck(checkerFunc)
-		check.state.name = "something"
+		check, err := NewCheck("some check", checkerFunc)
 		check.state.status = "OK"
 		check.state.message = "this is a message"
 		check.state.statusCode = 200
-		check.state.lastChecked = &t
-		check.state.lastSuccess = &t
-		check.state.lastFailure = &t
+		check.state.lastChecked = &t1
+		check.state.lastSuccess = &t2
+		check.state.lastFailure = &t3
 
 		So(err, ShouldBeNil)
 		Convey("When marshalling to json", func() {
 			j, err := json.Marshal(check)
 
-			Convey("Then the string form of the state should successful marshal", func() {
+			Convey("Then the string form of the state should successfully marshal", func() {
 				So(err, ShouldBeNil)
-				So(string(j), ShouldEqual, "{\"name\":\"something\",\"status\":\"OK\",\"status_code\":200,\"message\":\"this is a message\",\"last_checked\":\"1970-01-01T00:00:00Z\",\"last_success\":\"1970-01-01T00:00:00Z\",\"last_failure\":\"1970-01-01T00:00:00Z\"}")
+				So(string(j), ShouldEqual, "{\"name\":\"some check\",\"status\":\"OK\",\"status_code\":200,\"message\":\"this is a message\",\"last_checked\":\"1970-01-01T00:01:00Z\",\"last_success\":\"1970-01-01T00:02:00Z\",\"last_failure\":\"1970-01-01T00:03:00Z\"}")
 			})
 
-			Convey("When unmarshalling from json", func() {
-				check2, err := NewCheck(checkerFunc)
+			Convey("When unmarshalling from json to an empty Check", func() {
+				check2 := &Check{}
 
 				So(err, ShouldBeNil)
 
@@ -335,6 +317,44 @@ func TestJSONMarshalling(t *testing.T) {
 				So(*check2.state.lastChecked, ShouldEqual, *check.state.lastChecked)
 				So(*check2.state.lastFailure, ShouldEqual, *check.state.lastFailure)
 				So(*check2.state.lastSuccess, ShouldEqual, *check.state.lastSuccess)
+			})
+		})
+	})
+
+	Convey("Given a populated check state", t, func() {
+		t0 := time.Unix(0, 0).UTC()
+		t1 := t0.Add(1 * time.Minute)
+		t2 := t0.Add(2 * time.Minute)
+		t3 := t0.Add(3 * time.Minute)
+		state := NewCheckState("some check")
+		state.status = "OK"
+		state.message = "this is a message"
+		state.statusCode = 200
+		state.lastChecked = &t1
+		state.lastSuccess = &t2
+		state.lastFailure = &t3
+
+		Convey("When marshalling to json", func() {
+			j, err := json.Marshal(state)
+
+			Convey("Then the string form of the state should successfully marshal", func() {
+				So(err, ShouldBeNil)
+				So(string(j), ShouldEqual, "{\"name\":\"some check\",\"status\":\"OK\",\"status_code\":200,\"message\":\"this is a message\",\"last_checked\":\"1970-01-01T00:01:00Z\",\"last_success\":\"1970-01-01T00:02:00Z\",\"last_failure\":\"1970-01-01T00:03:00Z\"}")
+			})
+
+			Convey("When unmarshalling from json to an empty CheckState", func() {
+				state2 := &CheckState{}
+
+				err := json.Unmarshal(j, state2)
+
+				So(err, ShouldBeNil)
+				So(state2.name, ShouldEqual, state.name)
+				So(state2.status, ShouldEqual, state.status)
+				So(state2.statusCode, ShouldEqual, state.statusCode)
+				So(state2.message, ShouldEqual, state.message)
+				So(*state2.lastChecked, ShouldEqual, *state.lastChecked)
+				So(*state2.lastFailure, ShouldEqual, *state.lastFailure)
+				So(*state2.lastSuccess, ShouldEqual, *state.lastSuccess)
 			})
 		})
 	})

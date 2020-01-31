@@ -120,11 +120,10 @@ func (s *CheckState) LastFailure() *time.Time {
 }
 
 // Update updates the relevant state fields based on the status provided
-// name of the check
 // status of the check, must be one of healthcheck.StatusOK, healthcheck.StatusWarning or healthcheck.StatusCritical
 // message briefly describing the check state
 // statusCode returned if the check was an HTTP check (optional, provide 0 if not relevant)
-func (s *CheckState) Update(name, status, message string, statusCode int) error {
+func (s *CheckState) Update(status, message string, statusCode int) error {
 	now := time.Now().UTC()
 
 	s.mutex.Lock()
@@ -144,10 +143,6 @@ func (s *CheckState) Update(name, status, message string, statusCode int) error 
 	s.statusCode = statusCode
 	s.lastChecked = &now
 
-	if s.name == "" {
-		s.name = name
-	}
-
 	return nil
 }
 
@@ -161,20 +156,21 @@ func (c *Check) hasRun() bool {
 
 // NewCheck returns a pointer to a new instantiated Check with
 // the provided checker function
-func NewCheck(checker Checker) (*Check, error) {
+func NewCheck(name string, checker Checker) (*Check, error) {
 	if checker == nil {
 		return nil, errors.New("expected checker but none provided")
 	}
 
 	return &Check{
-		state:   NewCheckState(),
+		state:   NewCheckState(name),
 		checker: checker,
 	}, nil
 }
 
 // NewCheckState returns a pointer to a new instantiated CheckState
-func NewCheckState() *CheckState {
+func NewCheckState(name string) *CheckState {
 	return &CheckState{
+		name:  name,
 		mutex: &sync.RWMutex{},
 	}
 }
@@ -203,15 +199,17 @@ func (s *CheckState) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON takes the json representation of a check as a byte array and populates the Check object
 func (c *Check) UnmarshalJSON(b []byte) error {
 	if c.state == nil {
-		c.state = &CheckState{
-			mutex: &sync.RWMutex{},
-		}
+		c.state = NewCheckState("")
 	}
 	return json.Unmarshal(b, c.state)
 }
 
 // UnmarshalJSON takes the json representation of a check state as a byte array and populates the CheckState object
 func (s *CheckState) UnmarshalJSON(b []byte) error {
+	if s.mutex == nil {
+		*s = *NewCheckState("")
+	}
+
 	temp := &checkStateJSON{}
 	err := json.Unmarshal(b, temp)
 	if err == nil {
