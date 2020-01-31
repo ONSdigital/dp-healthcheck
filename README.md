@@ -70,7 +70,7 @@ Adding a health check to an app
     ```
         ...
 
-        hc, err := health.Create(versionInfo criticalTimeout, interval, CheckFunc1, CheckFunc2, someClient.Check)
+        hc, err := health.New(versionInfo criticalTimeout, interval, CheckFunc1, CheckFunc2, someClient.Check)
         if err != nil {
             ...
         }
@@ -83,7 +83,7 @@ Adding a health check to an app
     ```
         ...
 
-        hc, err := health.Create(versionInfo criticalTimeout, interval)
+        hc, err := health.New(versionInfo criticalTimeout, interval)
         if err != nil {
             ...
         }

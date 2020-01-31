@@ -185,7 +185,7 @@ func TestGetCheckStatus(t *testing.T) {
 		check := &Check{
 			state: &CheckState{
 				status: StatusOK,
-				mutex: &sync.RWMutex{},
+				mutex:  &sync.RWMutex{},
 			},
 		}
 
@@ -197,7 +197,7 @@ func TestGetCheckStatus(t *testing.T) {
 		check := &Check{
 			state: &CheckState{
 				status: StatusWarning,
-				mutex: &sync.RWMutex{},
+				mutex:  &sync.RWMutex{},
 			},
 		}
 
@@ -212,7 +212,7 @@ func TestGetCheckStatus(t *testing.T) {
 				check := &Check{
 					state: &CheckState{
 						status: StatusCritical,
-						mutex: &sync.RWMutex{},
+						mutex:  &sync.RWMutex{},
 					},
 				}
 
@@ -231,7 +231,7 @@ func TestGetCheckStatus(t *testing.T) {
 				check := &Check{
 					state: &CheckState{
 						status: StatusCritical,
-						mutex: &sync.RWMutex{},
+						mutex:  &sync.RWMutex{},
 					},
 				}
 
@@ -249,7 +249,7 @@ func TestGetCheckStatus(t *testing.T) {
 				check := &Check{
 					state: &CheckState{
 						status: StatusCritical,
-						mutex: &sync.RWMutex{},
+						mutex:  &sync.RWMutex{},
 					},
 				}
 
@@ -269,7 +269,7 @@ func TestGetCheckStatus(t *testing.T) {
 					state: &CheckState{
 						status:      StatusCritical,
 						lastSuccess: &t9,
-						mutex: &sync.RWMutex{},
+						mutex:       &sync.RWMutex{},
 					},
 				}
 
@@ -783,7 +783,7 @@ func createATestCheck(stateToReturn CheckState, hasPreviousCheck bool) *Check {
 		state.lastFailure = stateToReturn.lastFailure
 		return nil
 	}
-	check, _ := newCheck(checkerFunc)
+	check, _ := NewCheck(checkerFunc)
 	if hasPreviousCheck {
 		check.state.name = stateToReturn.name
 		check.state.status = stateToReturn.status
@@ -836,7 +836,7 @@ func runHealthHandlerAndTest(t *testing.T, hc *HealthCheck, desiredStatus string
 		return
 	}
 	So(w.Code, ShouldEqual, http.StatusOK)
-	// So(healthCheck.Status, ShouldEqual, desiredStatus)
+	So(healthCheck.Status, ShouldEqual, desiredStatus)
 	So(healthCheck.Version, ShouldResemble, testVersion)
 	So(healthCheck.StartTime, ShouldEqual, testStartTime)
 	So(healthCheck.Uptime, ShouldNotBeNil)

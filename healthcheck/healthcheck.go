@@ -12,16 +12,16 @@ const language = "go"
 
 // HealthCheck represents the app's health check, including its component checks
 type HealthCheck struct {
-	Status                   string          `json:"status"`
-	Version                  VersionInfo     `json:"version"`
-	Uptime                   time.Duration   `json:"uptime"`
-	StartTime                time.Time       `json:"start_time"`
-	Checks                   []*Check        `json:"checks"`
-	interval                 time.Duration   `json:"-"`
-	criticalErrorTimeout     time.Duration   `json:"-"`
-	timeOfFirstCriticalError time.Time       `json:"-"`
-	tickers                  []*ticker       `json:"-"`
-	context                  context.Context `json:"-"`
+	Status                   string        `json:"status"`
+	Version                  VersionInfo   `json:"version"`
+	Uptime                   time.Duration `json:"uptime"`
+	StartTime                time.Time     `json:"start_time"`
+	Checks                   []*Check      `json:"checks"`
+	interval                 time.Duration
+	criticalErrorTimeout     time.Duration
+	timeOfFirstCriticalError time.Time
+	tickers                  []*ticker
+	context                  context.Context
 }
 
 // VersionInfo represents the version information of an app
@@ -33,12 +33,12 @@ type VersionInfo struct {
 	Version         string    `json:"version"`
 }
 
-// Create returns a new instantiated HealthCheck object. Caller to provide:
+// New returns a new instantiated HealthCheck object. Caller to provide:
 // version information of the app,
 // criticalTimeout for how long to wait until an unhealthy dependent propagates its state to make this app unhealthy
 // interval in which to check health of dependencies
 // checkers which implement the checker interface and can run a checkup to determine the health of the app and/or its dependencies
-func Create(version VersionInfo, criticalTimeout, interval time.Duration, checkers ...Checker) (HealthCheck, error) {
+func New(version VersionInfo, criticalTimeout, interval time.Duration, checkers ...Checker) (HealthCheck, error) {
 	hc := HealthCheck{
 		Checks:               []*Check{},
 		Version:              version,
@@ -79,7 +79,7 @@ func CreateVersionInfo(buildTime, gitCommit, version string) (VersionInfo, error
 
 // AddCheck adds a provided checker to the health check
 func (hc *HealthCheck) AddCheck(checker Checker) (err error) {
-	check, err := newCheck(checker)
+	check, err := NewCheck(checker)
 	if err != nil {
 		return err
 	}
@@ -98,6 +98,7 @@ func (hc *HealthCheck) AddCheck(checker Checker) (err error) {
 
 // Start begins each ticker, this is used to run the health checks on dependent apps
 // takes argument context and should utilise contextWithCancel
+// Passing a nil context will cause errors during stop/app shutdown
 func (hc *HealthCheck) Start(ctx context.Context) {
 	hc.context = ctx
 	hc.StartTime = time.Now().UTC()

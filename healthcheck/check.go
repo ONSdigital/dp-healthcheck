@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
-	"fmt"
 )
 
 // A list of possible check statuses
@@ -119,7 +119,7 @@ func (s *CheckState) LastFailure() *time.Time {
 	return &t
 }
 
-// Update updates the relavent state fields based on the status provided
+// Update updates the relevant state fields based on the status provided
 // name of the check
 // status of the check, must be one of healthcheck.StatusOK, healthcheck.StatusWarning or healthcheck.StatusCritical
 // message briefly describing the check state
@@ -159,25 +159,32 @@ func (c *Check) hasRun() bool {
 	return true
 }
 
-// newCheck returns a pointer to a new instantiated Check with
+// NewCheck returns a pointer to a new instantiated Check with
 // the provided checker function
-func newCheck(checker Checker) (*Check, error) {
+func NewCheck(checker Checker) (*Check, error) {
 	if checker == nil {
 		return nil, errors.New("expected checker but none provided")
 	}
 
 	return &Check{
-		state: &CheckState{
-			mutex: &sync.RWMutex{},
-		},
+		state:   NewCheckState(),
 		checker: checker,
 	}, nil
 }
 
+// NewCheckState returns a pointer to a new instantiated CheckState
+func NewCheckState() *CheckState {
+	return &CheckState{
+		mutex: &sync.RWMutex{},
+	}
+}
+
+// MarshalJSON returns the json representation of the check as a byte array
 func (c *Check) MarshalJSON() ([]byte, error) {
 	return json.Marshal(c.state)
 }
 
+// MarshalJSON returns the json representation of the check state as a byte array
 func (s *CheckState) MarshalJSON() ([]byte, error) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
@@ -193,6 +200,7 @@ func (s *CheckState) MarshalJSON() ([]byte, error) {
 	})
 }
 
+// UnmarshalJSON takes the json representation of a check as a byte array and populates the Check object
 func (c *Check) UnmarshalJSON(b []byte) error {
 	if c.state == nil {
 		c.state = &CheckState{
@@ -202,6 +210,7 @@ func (c *Check) UnmarshalJSON(b []byte) error {
 	return json.Unmarshal(b, c.state)
 }
 
+// UnmarshalJSON takes the json representation of a check state as a byte array and populates the CheckState object
 func (s *CheckState) UnmarshalJSON(b []byte) error {
 	temp := &checkStateJSON{}
 	err := json.Unmarshal(b, temp)

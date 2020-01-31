@@ -19,7 +19,7 @@ func TestCreateNew(t *testing.T) {
 		err   error
 	)
 	Convey("Create a new check", t, func() {
-		check, _ = newCheck(checkerFunc)
+		check, _ = NewCheck(checkerFunc)
 		So(err, ShouldBeNil)
 		So(check.checker, ShouldEqual, checkerFunc)
 		So(check.state.mutex, ShouldNotBeNil)
@@ -32,13 +32,13 @@ func TestCreateNew(t *testing.T) {
 		So(check.state.lastFailure, ShouldBeNil)
 	})
 	Convey("A second new check shares the right values", t, func() {
-		check2, err := newCheck(checkerFunc)
+		check2, err := NewCheck(checkerFunc)
 		So(err, ShouldBeNil)
 		So(check2.checker, ShouldEqual, check.checker)
 		So(check2.state.mutex, ShouldNotPointTo, check.state.mutex)
 	})
 	Convey("Fail to create a new check as checker given is nil", t, func() {
-		check3, err := newCheck(nil)
+		check3, err := NewCheck(nil)
 		So(check3, ShouldBeNil)
 		So(err, ShouldNotBeNil)
 	})
@@ -205,7 +205,7 @@ func TestGets(t *testing.T) {
 			lastChecked: &t0,
 			lastSuccess: &t1,
 			lastFailure: &t2,
-			mutex: &sync.RWMutex{},
+			mutex:       &sync.RWMutex{},
 		}
 
 		Convey("When getting the name", func() {
@@ -302,7 +302,7 @@ func TestJSONMarshalling(t *testing.T) {
 		checkerFunc := func(ctx context.Context, state *CheckState) error {
 			return nil
 		}
-		check, err := newCheck(checkerFunc)
+		check, err := NewCheck(checkerFunc)
 		check.state.name = "something"
 		check.state.status = "OK"
 		check.state.message = "this is a message"
@@ -321,7 +321,7 @@ func TestJSONMarshalling(t *testing.T) {
 			})
 
 			Convey("When unmarshalling from json", func() {
-				check2, err := newCheck(checkerFunc)
+				check2, err := NewCheck(checkerFunc)
 
 				So(err, ShouldBeNil)
 
