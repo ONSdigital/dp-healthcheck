@@ -25,6 +25,15 @@ func (hc *HealthCheck) Handler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	switch hc.Status {
+	case StatusOK:
+		w.WriteHeader(http.StatusOK)
+	case StatusWarning:
+		w.WriteHeader(http.StatusTooManyRequests)
+	default:
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+
 	_, err = w.Write(b)
 	if err != nil {
 		log.Event(ctx, "failed to write bytes for http response", log.Error(err))

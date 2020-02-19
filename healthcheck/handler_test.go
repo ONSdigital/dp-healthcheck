@@ -277,7 +277,7 @@ func TestGetCheckStatus(t *testing.T) {
 
 				status := hc.getCheckStatus(check)
 				So(status, ShouldEqual, StatusWarning)
-				So(hc.timeOfFirstCriticalError, ShouldHappenBetween, t0, time.Now().UTC())
+				So(hc.timeOfFirstCriticalError, ShouldHappenOnOrBetween, t0, time.Now().UTC())
 				So(check.state.LastSuccess(), ShouldResemble, &t9)
 			})
 		})
@@ -536,7 +536,7 @@ func TestHandlerSingleCheck(t *testing.T) {
 		Convey("Then an empty check should result in the app reporting back as warning", func() {
 			statuses := []CheckState{nilStatus}
 			hc.Checks = createChecksSlice(statuses, true)
-			runHealthHandlerAndTest(t, &hc, StatusWarning, testVersion, t0, statuses)
+			runHealthHandlerAndTest(t, &hc, StatusWarning, testVersion, t0, statuses, http.StatusTooManyRequests)
 			// timeOfFirstCriticalError not set
 			So(hc.timeOfFirstCriticalError, ShouldResemble, time.Time{})
 		})
@@ -544,42 +544,42 @@ func TestHandlerSingleCheck(t *testing.T) {
 		Convey("Then a healthy check that has never been unhealthy should result in the app reporting back as healthy", func() {
 			statuses := []CheckState{healthyNeverUnhealthyStatus}
 			hc.Checks = createChecksSlice(statuses, true)
-			runHealthHandlerAndTest(t, &hc, StatusOK, testVersion, t0, statuses)
+			runHealthHandlerAndTest(t, &hc, StatusOK, testVersion, t0, statuses, http.StatusOK)
 			// timeOfFirstCriticalError not set
 			So(hc.timeOfFirstCriticalError, ShouldResemble, time.Time{})
 		})
 		Convey("Then a healthy check that has been unhealthy in the past should result in the app reporting back as healthy", func() {
 			statuses := []CheckState{healthyStatus1}
 			hc.Checks = createChecksSlice(statuses, true)
-			runHealthHandlerAndTest(t, &hc, StatusOK, testVersion, t0, statuses)
+			runHealthHandlerAndTest(t, &hc, StatusOK, testVersion, t0, statuses, http.StatusOK)
 			// timeOfFirstCriticalError not set
 			So(hc.timeOfFirstCriticalError, ShouldResemble, time.Time{})
 		})
 		Convey("Then an unhealthy check that has never been healthy should result in the app reporting back as warning", func() {
 			statuses := []CheckState{unhealthyNeverHealthyStatus}
 			hc.Checks = createChecksSlice(statuses, true)
-			runHealthHandlerAndTest(t, &hc, StatusWarning, testVersion, t0, statuses)
+			runHealthHandlerAndTest(t, &hc, StatusWarning, testVersion, t0, statuses, http.StatusTooManyRequests)
 			// timeOfFirstCriticalError not set
 			So(hc.timeOfFirstCriticalError, ShouldResemble, time.Time{})
 		})
 		Convey("Then an unhealthy check that has been healthy in the past should result in the app reporting back as warning", func() {
 			statuses := []CheckState{unhealthyStatus}
 			hc.Checks = createChecksSlice(statuses, true)
-			runHealthHandlerAndTest(t, &hc, StatusWarning, testVersion, t0, statuses)
+			runHealthHandlerAndTest(t, &hc, StatusWarning, testVersion, t0, statuses, http.StatusTooManyRequests)
 			// timeOfFirstCriticalError not set
 			So(hc.timeOfFirstCriticalError, ShouldResemble, time.Time{})
 		})
 		Convey("Then a critical check that has never been healthy should result in the app reporting back as warning and updating timestamp for first critical error", func() {
 			statuses := []CheckState{criticalNeverHealthyStatus}
 			hc.Checks = createChecksSlice(statuses, true)
-			runHealthHandlerAndTest(t, &hc, StatusWarning, testVersion, t0, statuses)
+			runHealthHandlerAndTest(t, &hc, StatusWarning, testVersion, t0, statuses, http.StatusTooManyRequests)
 			// timeOfFirstCriticalError set to this check's failure time
 			So(hc.timeOfFirstCriticalError, ShouldHappenWithin, time.Second, t0)
 		})
 		Convey("Then a critical check that has been healthy in the past should result in the app reporting back as warning and updating timestamp for first critical error", func() {
 			statuses := []CheckState{oldCriticalStatus}
 			hc.Checks = createChecksSlice(statuses, true)
-			runHealthHandlerAndTest(t, &hc, StatusWarning, testVersion, t0, statuses)
+			runHealthHandlerAndTest(t, &hc, StatusWarning, testVersion, t0, statuses, http.StatusTooManyRequests)
 			// timeOfFirstCriticalError set to this check's failure time
 			So(hc.timeOfFirstCriticalError, ShouldHappenWithin, time.Second, t0)
 		})
@@ -598,14 +598,14 @@ func TestHandlerSingleCheck(t *testing.T) {
 		Convey("Then a healthy check should result in the app reporting back as healthy", func() {
 			statuses := []CheckState{healthyNeverUnhealthyStatus}
 			hc.Checks = createChecksSlice(statuses, true)
-			runHealthHandlerAndTest(t, &hc, StatusOK, testVersion, t0, statuses)
+			runHealthHandlerAndTest(t, &hc, StatusOK, testVersion, t0, statuses, http.StatusOK)
 			// timeOfFirstCriticalError not updated
 			So(hc.timeOfFirstCriticalError, ShouldResemble, t10)
 		})
 		Convey("Then a recent critical check happening before the timeout expires should result in the app reporting back as warning", func() {
 			statuses := []CheckState{freshCriticalStatus}
 			hc.Checks = createChecksSlice(statuses, true)
-			runHealthHandlerAndTest(t, &hc, StatusWarning, testVersion, t0, statuses)
+			runHealthHandlerAndTest(t, &hc, StatusWarning, testVersion, t0, statuses, http.StatusTooManyRequests)
 			// timeOfFirstCriticalError not updated
 			So(hc.timeOfFirstCriticalError, ShouldResemble, t10)
 		})
@@ -613,7 +613,7 @@ func TestHandlerSingleCheck(t *testing.T) {
 			"should result in the app reporting back as warning and not updating timestamp for first critical error", func() {
 			statuses := []CheckState{oldCriticalStatus}
 			hc.Checks = createChecksSlice(statuses, true)
-			runHealthHandlerAndTest(t, &hc, StatusWarning, testVersion, t0, statuses)
+			runHealthHandlerAndTest(t, &hc, StatusWarning, testVersion, t0, statuses, http.StatusTooManyRequests)
 			// timeOfFirstCriticalError not updated
 			So(hc.timeOfFirstCriticalError, ShouldResemble, t10)
 		})
@@ -632,7 +632,7 @@ func TestHandlerSingleCheck(t *testing.T) {
 		Convey("Then a healthy check should result in the app reporting back as healthy", func() {
 			statuses := []CheckState{healthyNeverUnhealthyStatus}
 			hc.Checks = createChecksSlice(statuses, true)
-			runHealthHandlerAndTest(t, &hc, StatusOK, testVersion, t0, statuses)
+			runHealthHandlerAndTest(t, &hc, StatusOK, testVersion, t0, statuses, http.StatusOK)
 			// timeOfFirstCriticalError not set
 			So(hc.timeOfFirstCriticalError, ShouldResemble, t20)
 		})
@@ -640,7 +640,7 @@ func TestHandlerSingleCheck(t *testing.T) {
 			"and refresh timestamp for first critical error", func() {
 			statuses := []CheckState{freshCriticalStatus}
 			hc.Checks = createChecksSlice(statuses, true)
-			runHealthHandlerAndTest(t, &hc, StatusWarning, testVersion, t0, statuses)
+			runHealthHandlerAndTest(t, &hc, StatusWarning, testVersion, t0, statuses, http.StatusTooManyRequests)
 			// timeOfFirstCriticalError set to this check's failure time
 			So(hc.timeOfFirstCriticalError, ShouldHappenWithin, time.Second, t0)
 		})
@@ -648,7 +648,7 @@ func TestHandlerSingleCheck(t *testing.T) {
 			"and not refreshing timestamp for first critical error", func() {
 			statuses := []CheckState{oldCriticalStatus}
 			hc.Checks = createChecksSlice(statuses, true)
-			runHealthHandlerAndTest(t, &hc, StatusCritical, testVersion, t0, statuses)
+			runHealthHandlerAndTest(t, &hc, StatusCritical, testVersion, t0, statuses, http.StatusInternalServerError)
 			// timeOfFirstCriticalError set to this check's failure time
 			So(hc.timeOfFirstCriticalError, ShouldResemble, t20)
 		})
@@ -717,45 +717,45 @@ func TestHandlerMultipleChecks(t *testing.T) {
 		statuses := []CheckState{healthyStatus1, healthyStatus2, healthyStatus3}
 		hc := createHealthCheck(statuses, testStartTime, 10*time.Minute, true)
 		hc.timeOfFirstCriticalError = testStartTime.Add(-30 * time.Minute)
-		runHealthHandlerAndTest(t, &hc, StatusOK, testVersion, testStartTime, statuses)
+		runHealthHandlerAndTest(t, &hc, StatusOK, testVersion, testStartTime, statuses, http.StatusOK)
 	})
 	Convey("Given a healthy app and an unhealthy app", t, func() {
 		statuses := []CheckState{healthyStatus1, unhealthyStatus}
 		hc := createHealthCheck(statuses, testStartTime, 15*time.Second, true)
 		hc.timeOfFirstCriticalError = testStartTime.Add(-30 * time.Minute)
-		runHealthHandlerAndTest(t, &hc, StatusWarning, testVersion, testStartTime, statuses)
+		runHealthHandlerAndTest(t, &hc, StatusWarning, testVersion, testStartTime, statuses, http.StatusTooManyRequests)
 	})
 	Convey("Given a healthy app and a critical app that is beyond the threshold", t, func() {
 		checks := []CheckState{healthyStatus1, criticalStatus}
 		hc := createHealthCheck(checks, testStartTime, 10*time.Minute, true)
 		hc.timeOfFirstCriticalError = testStartTime.Add(-22 * time.Minute)
-		runHealthHandlerAndTest(t, &hc, StatusCritical, testVersion, testStartTime, checks)
+		runHealthHandlerAndTest(t, &hc, StatusCritical, testVersion, testStartTime, checks, http.StatusInternalServerError)
 	})
 	Convey("Given an unhealthy app and an app that has just turned critical and is under the critical threshold", t, func() {
 		statuses := []CheckState{unhealthyStatus, freshCriticalStatus}
 		hc := createHealthCheck(statuses, testStartTime, 10*time.Minute, true)
 		hc.timeOfFirstCriticalError = testStartTime.Add(-1 * time.Minute)
-		runHealthHandlerAndTest(t, &hc, StatusWarning, testVersion, testStartTime, statuses)
+		runHealthHandlerAndTest(t, &hc, StatusWarning, testVersion, testStartTime, statuses, http.StatusTooManyRequests)
 	})
 	Convey("Given an unhealthy app and an app that has been critical for longer than the critical threshold", t, func() {
 		statuses := []CheckState{unhealthyStatus, criticalStatus}
 		hc := createHealthCheck(statuses, testStartTime, 10*time.Minute, true)
 		hc.timeOfFirstCriticalError = testStartTime.Add(-22 * time.Minute)
-		runHealthHandlerAndTest(t, &hc, StatusCritical, testVersion, testStartTime, statuses)
+		runHealthHandlerAndTest(t, &hc, StatusCritical, testVersion, testStartTime, statuses, http.StatusInternalServerError)
 	})
 	Convey("Given an app just started up", t, func() {
 		statuses := []CheckState{freshCriticalStatus}
 		justStartedTime := time.Now().UTC()
 		hc := createHealthCheck(statuses, justStartedTime, 10*time.Minute, false)
 		hc.timeOfFirstCriticalError = justStartedTime
-		runHealthHandlerAndTest(t, &hc, StatusWarning, testVersion, justStartedTime, nil)
+		runHealthHandlerAndTest(t, &hc, StatusWarning, testVersion, justStartedTime, nil, http.StatusTooManyRequests)
 	})
 	Convey("Given an app has begun to start but not finished starting up completely", t, func() {
 		statuses := []CheckState{freshCriticalStatus}
 		justStartedTime := time.Now().UTC()
 		hc := createHealthCheck(statuses, justStartedTime, 10*time.Minute, true)
 		hc.timeOfFirstCriticalError = justStartedTime
-		runHealthHandlerAndTest(t, &hc, StatusWarning, testVersion, justStartedTime, statuses)
+		runHealthHandlerAndTest(t, &hc, StatusWarning, testVersion, justStartedTime, statuses, http.StatusTooManyRequests)
 	})
 	Convey("Given no apps", t, func() {
 		var checks []*Check
@@ -768,7 +768,7 @@ func TestHandlerMultipleChecks(t *testing.T) {
 			timeOfFirstCriticalError: testStartTime.Add(-30 * time.Minute),
 			tickers:                  nil,
 		}
-		runHealthHandlerAndTest(t, &hc, StatusOK, testVersion, testStartTime, statuses)
+		runHealthHandlerAndTest(t, &hc, StatusOK, testVersion, testStartTime, statuses, http.StatusOK)
 	})
 }
 
@@ -813,7 +813,7 @@ func createChecksSlice(statuses []CheckState, hasPreviousCheck bool) []*Check {
 	return checks
 }
 
-func runHealthHandlerAndTest(t *testing.T, hc *HealthCheck, desiredStatus string, testVersion VersionInfo, testStartTime time.Time, statuses []CheckState) {
+func runHealthHandlerAndTest(t *testing.T, hc *HealthCheck, desiredStatus string, testVersion VersionInfo, testStartTime time.Time, statuses []CheckState, expectedHTTPCode int) {
 	req, err := http.NewRequest("GET", "/health", nil)
 	if err != nil {
 		t.Fail()
@@ -833,7 +833,7 @@ func runHealthHandlerAndTest(t *testing.T, hc *HealthCheck, desiredStatus string
 		So(err, ShouldBeNil)
 		return
 	}
-	So(w.Code, ShouldEqual, http.StatusOK)
+	So(w.Code, ShouldEqual, expectedHTTPCode)
 	So(healthCheck.Status, ShouldEqual, desiredStatus)
 	So(healthCheck.Version, ShouldResemble, testVersion)
 	So(healthCheck.StartTime, ShouldEqual, testStartTime)

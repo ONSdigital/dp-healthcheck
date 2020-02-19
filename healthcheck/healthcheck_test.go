@@ -65,7 +65,7 @@ func TestNew(t *testing.T) {
 		So(hc.Version.Language, ShouldEqual, language)
 		So(hc.Version.LanguageVersion, ShouldEqual, "1.12")
 		So(hc.Version.Version, ShouldEqual, "1.0.0")
-		So(hc.StartTime, ShouldHappenBetween, timeBeforeCreation, time.Now().UTC())
+		So(hc.StartTime, ShouldHappenOnOrBetween, timeBeforeCreation, time.Now().UTC())
 		So(hc.criticalErrorTimeout, ShouldEqual, criticalTimeout)
 		So(len(hc.Checks), ShouldEqual, 0)
 		So(len(hc.tickers), ShouldEqual, 0)
@@ -86,7 +86,7 @@ func TestNew(t *testing.T) {
 		So(hc.Version.Language, ShouldEqual, language)
 		So(hc.Version.LanguageVersion, ShouldEqual, "1.12")
 		So(hc.Version.Version, ShouldEqual, "1.0.0")
-		So(hc.StartTime, ShouldHappenBetween, timeBeforeCreation, time.Now().UTC())
+		So(hc.StartTime, ShouldHappenOnOrBetween, timeBeforeCreation, time.Now().UTC())
 		So(hc.criticalErrorTimeout, ShouldEqual, criticalTimeout)
 		So(len(hc.tickers), ShouldEqual, 1)
 		Convey("After check function should have run, ensure the check state has updated", func() {
@@ -116,7 +116,7 @@ func TestNew(t *testing.T) {
 		So(hc.Version.Language, ShouldEqual, language)
 		So(hc.Version.LanguageVersion, ShouldEqual, "1.12")
 		So(hc.Version.Version, ShouldEqual, "1.0.0")
-		So(hc.StartTime, ShouldHappenBetween, timeBeforeCreation, time.Now().UTC())
+		So(hc.StartTime, ShouldHappenOnOrBetween, timeBeforeCreation, time.Now().UTC())
 		So(hc.criticalErrorTimeout, ShouldEqual, criticalTimeout)
 		So(len(hc.tickers), ShouldEqual, 2)
 		Convey("After the check functions should have run, ensure both check states have updated", func() {
