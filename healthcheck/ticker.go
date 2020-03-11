@@ -4,13 +4,12 @@ import (
 	"context"
 	"time"
 
+	gonslog "github.com/ONSdigital/go-ns/log"
 	"github.com/ONSdigital/log.go/log"
 )
 
 type ticker struct {
 	timeTicker *time.Ticker
-	closing    chan bool
-	closed     chan bool
 	check      *Check
 }
 
@@ -19,8 +18,6 @@ func createTicker(interval time.Duration, check *Check) *ticker {
 	intervalWithJitter := calcIntervalWithJitter(interval)
 	return &ticker{
 		timeTicker: time.NewTicker(intervalWithJitter),
-		closing:    make(chan bool),
-		closed:     make(chan bool),
 		check:      check,
 	}
 }
@@ -28,12 +25,11 @@ func createTicker(interval time.Duration, check *Check) *ticker {
 // start creates a goroutine to read the given ticker channel (which spins off a check for that ticker)
 func (ticker *ticker) start(ctx context.Context) {
 	go func() {
-		defer close(ticker.closed)
 		for {
 			select {
 			case <-ctx.Done():
-				ticker.stop()
-			case <-ticker.closing:
+				ticker.timeTicker.Stop()
+				gonslog.Debug("ticker.go : ctx.Done() and ticker stopped", nil) // TODO: remove when / if happy code runs OK
 				return
 			case <-ticker.timeTicker.C:
 				go ticker.runCheck(ctx)
@@ -53,23 +49,4 @@ func (ticker *ticker) runCheck(ctx context.Context) {
 		log.Event(nil, "failed", log.Error(err), log.Data{"external_service": name})
 		return
 	}
-}
-
-// stop the ticker
-func (ticker *ticker) stop() {
-	if ticker.isStopping() {
-		return
-	}
-	ticker.timeTicker.Stop()
-	close(ticker.closing)
-	<-ticker.closed
-}
-
-func (ticker *ticker) isStopping() bool {
-	select {
-	case <-ticker.closing:
-		return true
-	default:
-	}
-	return false
 }
