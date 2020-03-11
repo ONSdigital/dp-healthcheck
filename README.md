@@ -36,9 +36,10 @@ Adding a health check to an app
     ...
 
     func main() {
-        ctx := context.Context(context.Background())
+        ctx, cancelHealthChecks := context.WithCancel(context.Background())
 
         ...
+
 
         // Likely these values would come from your app's config
         criticalTimeout := time.Minute
@@ -46,18 +47,14 @@ Adding a health check to an app
 
         ...
 
-        // Likely these values would come from your app's config
-        criticalTimeout := time.Minute
-        interval := 10 * time.Second
-
-        ...
-
-        versionInfo := health.NewVersionInfo(
+        versionInfo, err := healthcheck.NewVersionInfo(
             BuildTime,
             GitCommit,
             Version,
         )
-
+        if err != nil {
+            ...
+        }
         ...
     ```
 
@@ -68,10 +65,7 @@ Adding a health check to an app
     ```
         ...
 
-        hc, err := health.New(versionInfo criticalTimeout, interval)
-        if err != nil {
-            ...
-        }
+        hc := health.New(versionInfo criticalTimeout, interval)
 
         ...
     ```
@@ -117,7 +111,7 @@ Adding a health check to an app
     ```
         ...
 
-        s := server.New(":8080", r
+        s := server.New(":8080", r)
         if err := s.ListenAndServe(); err != nil {
             ...
         }
@@ -130,7 +124,8 @@ Adding a health check to an app
     ```
         ...
 
-        hc.Stop()
+        cancelHealthChecks()
+        <-ctx.Done()
 
         ...
     }
@@ -182,7 +177,7 @@ Implement a checker by creating a function (with or without a receiver) that is 
 For example:
 
 ```
-func Check(ctx context.Context, state *CheckState) error {
+func Check(ctx context.Context, state *health.CheckState) error {
 	success := rand.Float32() < 0.5
 	warn := rand.Float32() < 0.5
 
