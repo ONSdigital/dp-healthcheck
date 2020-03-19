@@ -36,7 +36,7 @@ func (ticker *ticker) start(ctx context.Context) {
 			case <-ticker.closing:
 				return
 			case <-ticker.timeTicker.C:
-				go ticker.runCheck(ctx)
+				ticker.runCheck(ctx)
 			}
 		}
 	}()

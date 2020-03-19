@@ -327,3 +327,59 @@ func TestNewVersionInfo(t *testing.T) {
 		So(outputVersion, ShouldResemble, expectedVersion)
 	})
 }
+
+func TestStop(t *testing.T) {
+
+	tickerFinished := false
+	checkerDuration := interval / 2
+
+	emptyChecker := func(ctx context.Context, state *CheckState) error {
+		return nil
+	}
+
+	longRunningChecker := func(ctx context.Context, state *CheckState) error {
+		time.Sleep(checkerDuration)
+		tickerFinished = true
+		return nil
+	}
+
+	Convey("Given a Health Check with a long running checker", t, func() {
+
+		hc := New(version, criticalTimeout, interval)
+		err := hc.AddCheck("check 1", longRunningChecker)
+		So(err, ShouldBeNil)
+		hc.Start(context.Background())
+
+		Convey("When stop is called while the ticker is running", func() {
+
+			time.Sleep(interval + (checkerDuration / 2)) // wait for the initial tick and then give it time to start running
+			hc.Stop()
+
+			Convey("Then the stop function does not return until the checker is complete", func() {
+				So(tickerFinished, ShouldBeTrue)
+			})
+		})
+	})
+
+	Convey("Given a Health Check with multiple long running checkers", t, func() {
+
+		hc := New(version, criticalTimeout, interval)
+		err := hc.AddCheck("check 1", emptyChecker)
+		So(err, ShouldBeNil)
+		err = hc.AddCheck("check 2", emptyChecker)
+		So(err, ShouldBeNil)
+		err = hc.AddCheck("check 3", longRunningChecker)
+		So(err, ShouldBeNil)
+		hc.Start(context.Background())
+
+		Convey("When stop is called while the ticker is running", func() {
+
+			time.Sleep(interval + (checkerDuration / 2)) // wait for the initial tick and then give it time to start running
+			hc.Stop()
+
+			Convey("Then the stop function does not return until all checkers have completed", func() {
+				So(tickerFinished, ShouldBeTrue)
+			})
+		})
+	})
+}
