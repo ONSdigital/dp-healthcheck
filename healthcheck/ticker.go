@@ -2,6 +2,7 @@ package healthcheck
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/ONSdigital/log.go/log"
@@ -12,6 +13,7 @@ type ticker struct {
 	closing    chan bool
 	closed     chan bool
 	check      *Check
+	wg         sync.WaitGroup
 }
 
 // createTicker will create a ticker that calls an individual check's checker function at the provided interval
@@ -29,21 +31,29 @@ func createTicker(interval time.Duration, check *Check) *ticker {
 func (ticker *ticker) start(ctx context.Context) {
 	go func() {
 		defer close(ticker.closed)
+
+	tickerLoop:
 		for {
 			select {
 			case <-ctx.Done():
 				ticker.stop()
 			case <-ticker.closing:
-				return
+				break tickerLoop
 			case <-ticker.timeTicker.C:
-				ticker.runCheck(ctx)
+				ticker.wg.Add(1)
+				go ticker.runCheck(ctx)
 			}
 		}
+
+		ticker.wg.Wait()
 	}()
 }
 
 // runCheck runs a checker function of the check associated with the ticker
 func (ticker *ticker) runCheck(ctx context.Context) {
+
+	defer ticker.wg.Done()
+
 	err := ticker.check.checker(ctx, ticker.check.state)
 	if err != nil {
 		name := "no check has been made yet"
