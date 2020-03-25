@@ -25,6 +25,8 @@ func (hc *HealthCheck) Handler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+
 	switch hc.Status {
 	case StatusOK:
 		w.WriteHeader(http.StatusOK)

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"runtime"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -22,6 +23,7 @@ type HealthCheck struct {
 	timeOfFirstCriticalError time.Time
 	tickers                  []*ticker
 	context                  context.Context
+	tickersWaitgroup         *sync.WaitGroup
 }
 
 // VersionInfo represents the version information of an app
@@ -44,6 +46,7 @@ func New(version VersionInfo, criticalTimeout, interval time.Duration) HealthChe
 		criticalErrorTimeout: criticalTimeout,
 		interval:             interval,
 		tickers:              []*ticker{},
+		tickersWaitgroup:     &sync.WaitGroup{},
 	}
 }
 
@@ -81,7 +84,7 @@ func (hc *HealthCheck) AddCheck(name string, checker Checker) (err error) {
 	hc.tickers = append(hc.tickers, ticker)
 
 	if hc.context != nil {
-		ticker.start(hc.context)
+		ticker.start(hc.context, hc.tickersWaitgroup)
 	}
 
 	return nil
@@ -94,7 +97,7 @@ func (hc *HealthCheck) Start(ctx context.Context) {
 	hc.context = ctx
 	hc.StartTime = time.Now().UTC()
 	for _, ticker := range hc.tickers {
-		ticker.start(ctx)
+		ticker.start(ctx, hc.tickersWaitgroup)
 	}
 }
 
@@ -103,4 +106,5 @@ func (hc *HealthCheck) Stop() {
 	for _, ticker := range hc.tickers {
 		ticker.stop()
 	}
+	hc.tickersWaitgroup.Wait()
 }
