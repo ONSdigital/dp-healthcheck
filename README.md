@@ -61,9 +61,9 @@ Adding a health check to an app
         ...
     ```
 
-2. Initialise any clients that have `Checker` type functions you wish to use
+3. Initialise any clients that have `Checker` type functions you wish to use
 
-3. Instantiate the health check library:
+4. Instantiate the health check library:
 
     ```
         ...
@@ -76,7 +76,7 @@ Adding a health check to an app
         ...
     ```
 
-4. Register your `Checker` functions providing a short human readable name for each (it is best to try to keep the name consistent between apps where possible):
+5. Register your `Checker` functions providing a short human readable name for each (it is best to try to keep the name consistent between apps where possible):
 
     ```
         ...
@@ -91,7 +91,7 @@ Adding a health check to an app
         ...
     ```
 
-5. Register the health handler:
+6. Register the health handler:
 
     ```
         ...
@@ -102,7 +102,7 @@ Adding a health check to an app
         ...
     ```
 
-6. Start the health check library:
+7. Start the health check library:
 
     ```
         ...
@@ -112,12 +112,30 @@ Adding a health check to an app
         ...
     ```
 
-7. Start the HTTP server:
+8. Create and start the HTTP server.
 
+    8.1. Without whitelist (usual case):
     ```
         ...
 
-        s := server.New(":8080", r
+        s := server.New(":8080", r)
+                if err := s.ListenAndServe(); err != nil {
+            ...
+        }
+
+        ...
+    ```
+
+    8.2. With whitelist (before applying any middleware that afects all endpoints, like auth protection):
+    ```
+        ...
+
+	    middlewareChain := alice.New(middleware.Whitelist(middleware.HealthcheckFilter(hc.Handler)))
+
+        ...
+
+	    alice := middlewareChain.Then(r)
+	    s := server.New(":8080", alice)
         if err := s.ListenAndServe(); err != nil {
             ...
         }
@@ -125,7 +143,7 @@ Adding a health check to an app
         ...
     ```
 
-8. Then gracefully shutdown the health check library:
+9. Then gracefully shutdown the health check library:
 
     ```
         ...
@@ -136,7 +154,7 @@ Adding a health check to an app
     }
     ```
 
-9. Set the `BuildTime`, `GitCommit` and `Version` during compile:
+10. Set the `BuildTime`, `GitCommit` and `Version` during compile:
 
     Command line:
 
