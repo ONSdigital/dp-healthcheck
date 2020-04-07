@@ -101,7 +101,7 @@ Adding a health check to an app
         ...
     ```
 
-6. Register the health handler, unless you are using the whitelist middleware described in tep 8.2:
+6. Register the health handler, unless you are using the whitelist middleware described in step 8.2:
 
     ```
         ...
