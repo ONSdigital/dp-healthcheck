@@ -13,7 +13,7 @@ import (
 const whitelistBody = "Whitelist Handler has been executed"
 const defaultBody = "Default (next in chain) Handler has been executed"
 
-func TestHealthcheckFiltger(t *testing.T) {
+func TestHealthcheckFilter(t *testing.T) {
 
 	Convey("Given a HealthcheckFilter generated from a healthcheck object's handler", t, func() {
 

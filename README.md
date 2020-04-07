@@ -61,7 +61,17 @@ Adding a health check to an app
         ...
     ```
 
-3. Initialise any clients that have `Checker` type functions you wish to use
+3. Initialise any clients that have `Checker` type functions you wish to use:
+
+
+    ```
+        ...
+
+        // example
+        cliWithChecker := s3client.NewClient("eu-west-1", "myBucket", true)
+
+        ...
+    ```
 
 4. Instantiate the health check library:
 
@@ -76,7 +86,7 @@ Adding a health check to an app
         ...
     ```
 
-5. Register your `Checker` functions providing a short human readable name for each (it is best to try to keep the name consistent between apps where possible):
+5. Register your `Checker` functions providing a short human-readable name for each (it is best to try to keep the name consistent between apps where possible):
 
     ```
         ...
@@ -91,7 +101,7 @@ Adding a health check to an app
         ...
     ```
 
-6. Register the health handler:
+6. Register the health handler, unless you are using the whitelist middleware described in tep 8.2:
 
     ```
         ...
@@ -102,7 +112,7 @@ Adding a health check to an app
         ...
     ```
 
-7. Start the health check library:
+7. Start the health check background routine:
 
     ```
         ...
@@ -126,7 +136,7 @@ Adding a health check to an app
         ...
     ```
 
-    8.2. With whitelist (before applying any middleware that afects all endpoints, like auth protection):
+    8.2. With whitelist (before applying any middleware that affects all endpoints, like auth protection):
     ```
         ...
 
