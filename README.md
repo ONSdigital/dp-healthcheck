@@ -41,14 +41,8 @@ Adding a health check to an app
         ...
 
         // Likely these values would come from your app's config
-        criticalTimeout := time.Minute
-        interval := 10 * time.Second
-
-        ...
-
-        // Likely these values would come from your app's config
-        criticalTimeout := time.Minute
-        interval := 10 * time.Second
+        criticalTimeout := 90 * time.Second // defined by env var HEALTHCHECK_CRITICAL_TIMEOUT
+        interval := 30 * time.Second // defined by env var HEALTHCHECK_INTERVAL
 
         ...
 
