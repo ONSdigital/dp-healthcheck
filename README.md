@@ -20,7 +20,7 @@ Adding a health check to an app
     import (
         ...
         health "github.com/ONSdigital/dp-healthcheck/healthcheck"
-        "github.com/ONSdigital/go-ns/server"
+        dphttp "github.com/ONSdigital/dp-net/http"
         "github.com/gorilla/mux"
         ...
     )
@@ -111,7 +111,7 @@ Adding a health check to an app
     ```
         ...
 
-        s := server.New(":8080", r
+        s := dphttp.NewServer(":8080", r
         if err := s.ListenAndServe(); err != nil {
             ...
         }
