@@ -30,24 +30,46 @@ func createTicker(interval time.Duration, check *Check) *ticker {
 func (ticker *ticker) start(ctx context.Context, wg *sync.WaitGroup) {
 	go func() {
 		defer close(ticker.closed)
+
+		const maxChecks int = 5 // Max number of healthchecks in flight
+		var checkInFlight int
+		checkDone := make(chan bool, maxChecks)
+
 		for {
+			//fmt.Printf("count: %v\n", checkInFlight)
 			select {
 			case <-ctx.Done():
 				ticker.stop()
 			case <-ticker.closing:
+				close(checkDone)
 				return
 			case <-ticker.timeTicker.C:
-				wg.Add(1)
-				go ticker.runCheck(ctx, wg)
+				if checkInFlight < maxChecks {
+					checkInFlight++
+					wg.Add(1)
+					go ticker.runCheck(ctx, wg, checkDone)
+				}
+			case <-checkDone:
+				checkInFlight--
 			}
 		}
 	}()
 }
 
 // runCheck runs a checker function of the check associated with the ticker, notifying the provided waitgroup
-func (ticker *ticker) runCheck(ctx context.Context, wg *sync.WaitGroup) {
+func (ticker *ticker) runCheck(ctx context.Context, wg *sync.WaitGroup, done chan bool) {
 
-	defer wg.Done()
+	defer func() {
+		if x := recover(); x != nil {
+			// do nothing ... just handle timing corner case and avoid "panic: send on closed channel"
+			//fmt.Printf("in recover of runCheck : %v\n", x)
+		}
+	}()
+
+	defer func() { // this gets called before the defer above
+		wg.Done()
+		done <- true
+	}()
 
 	err := ticker.check.checker(ctx, ticker.check.state)
 	if err != nil {
@@ -66,8 +88,17 @@ func (ticker *ticker) stop() {
 		return
 	}
 	ticker.timeTicker.Stop()
+
+	defer func() {
+		if x := recover(); x != nil {
+			// do nothing ... just handle timing corner case and avoid "panic: send on closed channel"
+			//fmt.Printf("in recover of stop : %v\n", x)
+		}
+		<-ticker.closed
+		//fmt.Printf("got ticker.closed\n")
+	}()
+
 	close(ticker.closing)
-	<-ticker.closed
 }
 
 func (ticker *ticker) isStopping() bool {
