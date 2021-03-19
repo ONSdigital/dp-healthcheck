@@ -1,3 +1,6 @@
+.PHONY: all
+all: audit test build
+
 .PHONY: test
 test:
 	go test -race -cover ./...

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/ONSdigital/log.go/log"
+	"github.com/google/go-cmp/cmp"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -835,7 +836,7 @@ func runHealthHandlerAndTest(t *testing.T, hc *HealthCheck, desiredStatus string
 	}
 	So(w.Code, ShouldEqual, expectedHTTPCode)
 	So(healthCheck.Status, ShouldEqual, desiredStatus)
-	So(healthCheck.Version, ShouldResemble, testVersion)
+	So(cmp.Equal(healthCheck.Version, testVersion), ShouldBeTrue)
 	So(healthCheck.StartTime, ShouldEqual, testStartTime)
 	So(healthCheck.Uptime, ShouldNotBeNil)
 	So(time.Now().UTC().After(healthCheck.StartTime.Add(healthCheck.Uptime)), ShouldBeTrue)
