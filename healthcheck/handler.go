@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/ONSdigital/log.go/log"
+	"github.com/ONSdigital/log.go/v2/log"
 )
 
 var minTime = time.Unix(0, 0)
@@ -21,7 +21,7 @@ func (hc *HealthCheck) Handler(w http.ResponseWriter, req *http.Request) {
 
 	b, err := json.Marshal(hc)
 	if err != nil {
-		log.Event(ctx, "failed to marshal json", log.Error(err), log.Data{"health_check_response": hc})
+		log.Error(ctx, "failed to marshal json", err, log.Data{"health_check_response": hc})
 		return
 	}
 
@@ -38,7 +38,7 @@ func (hc *HealthCheck) Handler(w http.ResponseWriter, req *http.Request) {
 
 	_, err = w.Write(b)
 	if err != nil {
-		log.Event(ctx, "failed to write bytes for http response", log.Error(err))
+		log.Error(ctx, "failed to write bytes for http response", err)
 		return
 	}
 }
@@ -56,7 +56,7 @@ func (hc *HealthCheck) isAppStartingUp() bool {
 // getStatus returns a status as string as to the overall current apps health based on its dependent apps health
 func (hc *HealthCheck) getStatus(ctx context.Context) string {
 	if hc.isAppStartingUp() {
-		log.Event(ctx, "a dependency is still starting up")
+		log.Warn(ctx, "a dependency is still starting up")
 		return StatusWarning
 	}
 	return hc.isAppHealthy()
