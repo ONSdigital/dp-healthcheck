@@ -12,3 +12,7 @@ audit:
 build:
 	go build ./...
 .PHONY: build
+
+lint:
+	exit
+.PHONY: lint
