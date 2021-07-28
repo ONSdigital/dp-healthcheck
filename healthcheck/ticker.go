@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ONSdigital/log.go/log"
+	"github.com/ONSdigital/log.go/v2/log"
 )
 
 type ticker struct {
@@ -55,7 +55,7 @@ func (ticker *ticker) runCheck(ctx context.Context, wg *sync.WaitGroup) {
 		if ticker.check.state != nil {
 			name = ticker.check.state.Name()
 		}
-		log.Event(nil, "failed", log.Error(err), log.Data{"external_service": name})
+		log.Error(ctx, "failed", err, log.Data{"external_service": name})
 		return
 	}
 }
