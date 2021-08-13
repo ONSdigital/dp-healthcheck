@@ -62,7 +62,7 @@ func (hc *HealthCheck) getStatus(ctx context.Context) string {
 	return hc.isAppHealthy()
 }
 
-// isAppHealthy checks every check for their health then produces and returns a status for this apps health
+// isAppHealthy checks individual Checks for their health then produces and returns the worst status as this apps health
 func (hc *HealthCheck) isAppHealthy() string {
 	status := StatusOK
 	for _, check := range hc.Checks {
@@ -76,7 +76,7 @@ func (hc *HealthCheck) isAppHealthy() string {
 	return status
 }
 
-// getCheckStatus returns a string for the status on if an individual check
+// getCheckStatus returns a string for the status on an individual check
 func (hc *HealthCheck) getCheckStatus(c *Check) string {
 	switch c.state.Status() {
 	case StatusOK:
