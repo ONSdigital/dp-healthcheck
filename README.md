@@ -1,18 +1,15 @@
-dp-healthcheck
-==============
+# dp-healthcheck
 
 A health check library for ONS Digital Publishing that implements the [Health Check Specification](https://github.com/ONSdigital/dp/blob/master/standards/HEALTH_CHECK_SPECIFICATION.md).
 
 All Digital Publishing apps must implement a health check using this library.  Functions that implement the `Checker` type are registered with the library which will check internal and external measures of the app's health.  The library will then call these functions periodically to determine the overall health of the app and report this back using the included handler.
 
-Getting started
----------------
+## Getting started
 
 * [Add health check to an app](#adding-a-health-check-to-an-app)
 * [Implementing a `Checker` function](#implementing-a-checker)
 
-Adding a health check to an app
--------------------------------
+## Adding a health check to an app
 
 1. Import the library and your HTTP server dependencies:
 
@@ -168,8 +165,7 @@ Adding a health check to an app
     ...
     ```
 
-Implementing a checker
-----------------------
+## Implementing a checker
 
 Each checker measures the health of something that is required for an app to function.  This could be something internal to the app (e.g. latency, error rate, saturation, etc.) or something external (e.g. the health of an upstream app, connection to a data store, etc.).  Each checker is a function that gets the current state of whatever it is responsible for checking.
 
@@ -195,14 +191,12 @@ func Check(ctx context.Context, state *CheckState) error {
 
 Note that the `statusCode` argument (last argument) to `CheckState.Update()` is only used for HTTP based checks.  If you do not have a status code then pass `0` as seen in the example above (degraded state/warning block).
 
-Contributing
----
+## Contributing
 
 See [CONTRIBUTING](CONTRIBUTING.md) for details.
 
-License
----
+## License
 
-Copyright © 2019-2020, Office for National Statistics (https://www.ons.gov.uk)
+Copyright © 2019-2021, Office for National Statistics [https://www.ons.gov.uk](https://www.ons.gov.uk)
 
 Released under MIT license, see [LICENSE](LICENSE.md) for details.
