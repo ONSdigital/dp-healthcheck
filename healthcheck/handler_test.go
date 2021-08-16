@@ -23,6 +23,16 @@ var testVersion = VersionInfo{
 	Version:         "1.0.0",
 }
 
+func getTestHealthCheck(startTime time.Time, criticalErrTimeout time.Duration) HealthCheck {
+	return HealthCheck{
+		Version:              testVersion,
+		StartTime:            startTime,
+		criticalErrorTimeout: criticalErrTimeout,
+		tickers:              nil,
+		statusLock:           &sync.RWMutex{},
+	}
+}
+
 // Test getStatus() function that inherits logic from isAppStartingUp() and isAppHealthy()
 func TestGetStatus(t *testing.T) {
 	t0 := time.Now().UTC()
@@ -32,18 +42,13 @@ func TestGetStatus(t *testing.T) {
 	Convey("Given application is still starting up", t, func() {
 		Convey("Then the app has a health state of WARNING", func() {
 			// Create health check object
-			hc := HealthCheck{
-				Version:              testVersion,
-				StartTime:            t0,
-				criticalErrorTimeout: criticalErrTimeout,
-				tickers:              nil,
-			}
+			hc := getTestHealthCheck(t0, criticalErrTimeout)
 
 			// Adding checks
-			statuses := []CheckState{CheckState{}}
+			statuses := []CheckState{{}}
 			hc.Checks = createChecksSlice(statuses, true)
 
-			state := hc.getStatus(ctx)
+			state := hc.getAppStatus(ctx)
 			So(state, ShouldEqual, StatusWarning)
 		})
 	})
@@ -51,18 +56,13 @@ func TestGetStatus(t *testing.T) {
 	Convey("Given application has started up successfully", t, func() {
 		Convey("Then the app has a health state of OK", func() {
 			// Create health check object
-			hc := HealthCheck{
-				Version:              testVersion,
-				StartTime:            t0,
-				criticalErrorTimeout: criticalErrTimeout,
-				tickers:              nil,
-			}
+			hc := getTestHealthCheck(t0, criticalErrTimeout)
 
 			// Adding checks
-			statuses := []CheckState{CheckState{status: StatusOK, lastChecked: &t0, mutex: &sync.RWMutex{}}}
+			statuses := []CheckState{{status: StatusOK, lastChecked: &t0, mutex: &sync.RWMutex{}}}
 			hc.Checks = createChecksSlice(statuses, true)
 
-			state := hc.getStatus(ctx)
+			state := hc.getAppStatus(ctx)
 			So(state, ShouldEqual, StatusOK)
 		})
 	})
@@ -76,12 +76,7 @@ func TestIsAppStartingUP(t *testing.T) {
 	Convey("Given no checks against healthcheck", t, func() {
 		Convey("Then the app has not started up", func() {
 			// Create health check object
-			hc := HealthCheck{
-				Version:              testVersion,
-				StartTime:            t0,
-				criticalErrorTimeout: criticalErrTimeout,
-				tickers:              nil,
-			}
+			hc := getTestHealthCheck(t0, criticalErrTimeout)
 
 			isStarting := hc.isAppStartingUp()
 			So(isStarting, ShouldEqual, false)
@@ -91,15 +86,10 @@ func TestIsAppStartingUP(t *testing.T) {
 	Convey("Given a healthcheck with a single check without a lastChecked timestamp", t, func() {
 		Convey("Then the app has not started up", func() {
 			// Create health check object
-			hc := HealthCheck{
-				Version:              testVersion,
-				StartTime:            t0,
-				criticalErrorTimeout: criticalErrTimeout,
-				tickers:              nil,
-			}
+			hc := getTestHealthCheck(t0, criticalErrTimeout)
 
 			// Adding checks
-			statuses := []CheckState{CheckState{}}
+			statuses := []CheckState{{}}
 			hc.Checks = createChecksSlice(statuses, true)
 
 			isStarting := hc.isAppStartingUp()
@@ -110,15 +100,10 @@ func TestIsAppStartingUP(t *testing.T) {
 	Convey("Given a healthcheck with a single check with a lastChecked timestamp", t, func() {
 		Convey("Then the app has not started up", func() {
 			// Create health check object
-			hc := HealthCheck{
-				Version:              testVersion,
-				StartTime:            t0,
-				criticalErrorTimeout: criticalErrTimeout,
-				tickers:              nil,
-			}
+			hc := getTestHealthCheck(t0, criticalErrTimeout)
 
 			// Adding checks
-			statuses := []CheckState{CheckState{lastChecked: &t0, mutex: &sync.RWMutex{}}}
+			statuses := []CheckState{{lastChecked: &t0, mutex: &sync.RWMutex{}}}
 			hc.Checks = createChecksSlice(statuses, true)
 
 			isStarting := hc.isAppStartingUp()
@@ -129,15 +114,10 @@ func TestIsAppStartingUP(t *testing.T) {
 	Convey("Given a healthcheck with two checks both with a lastChecked timestamp", t, func() {
 		Convey("Then the app has not started up", func() {
 			// Create health check object
-			hc := HealthCheck{
-				Version:              testVersion,
-				StartTime:            t0,
-				criticalErrorTimeout: criticalErrTimeout,
-				tickers:              nil,
-			}
+			hc := getTestHealthCheck(t0, criticalErrTimeout)
 
 			// Adding checks
-			statuses := []CheckState{CheckState{lastChecked: &t0, mutex: &sync.RWMutex{}}, CheckState{lastChecked: &t0, mutex: &sync.RWMutex{}}}
+			statuses := []CheckState{{lastChecked: &t0, mutex: &sync.RWMutex{}}, {lastChecked: &t0, mutex: &sync.RWMutex{}}}
 			hc.Checks = createChecksSlice(statuses, true)
 
 			isStarting := hc.isAppStartingUp()
@@ -148,15 +128,10 @@ func TestIsAppStartingUP(t *testing.T) {
 	Convey("Given a healthcheck with two checks with at least one without a lastChecked timestamp", t, func() {
 		Convey("Then the app has started up", func() {
 			// Create health check object
-			hc := HealthCheck{
-				Version:              testVersion,
-				StartTime:            t0,
-				criticalErrorTimeout: criticalErrTimeout,
-				tickers:              nil,
-			}
+			hc := getTestHealthCheck(t0, criticalErrTimeout)
 
 			// Adding checks
-			statuses := []CheckState{CheckState{lastChecked: &t0, mutex: &sync.RWMutex{}}, CheckState{mutex: &sync.RWMutex{}}}
+			statuses := []CheckState{{lastChecked: &t0, mutex: &sync.RWMutex{}}, {mutex: &sync.RWMutex{}}}
 			hc.Checks = createChecksSlice(statuses, true)
 
 			isStarting := hc.isAppStartingUp()
@@ -175,12 +150,7 @@ func TestGetCheckStatus(t *testing.T) {
 	criticalErrTimeout := 10 * time.Minute
 
 	// Create empty health check object
-	hc := HealthCheck{
-		Version:              testVersion,
-		StartTime:            t0,
-		criticalErrorTimeout: criticalErrTimeout,
-		tickers:              nil,
-	}
+	hc := getTestHealthCheck(t0, criticalErrTimeout)
 
 	Convey("Given check status is okay return OK", t, func() {
 		check := &Check{
@@ -327,12 +297,7 @@ func TestIsAppHealthy(t *testing.T) {
 		Convey("Then the returning status is OK", func() {
 
 			// Create health check object
-			hc := HealthCheck{
-				Version:              testVersion,
-				StartTime:            t0,
-				criticalErrorTimeout: criticalErrTimeout,
-				tickers:              nil,
-			}
+			hc := getTestHealthCheck(t0, criticalErrTimeout)
 
 			// Adding two healthy checks
 			statuses := []CheckState{healthyCheck, healthyCheck}
@@ -348,12 +313,7 @@ func TestIsAppHealthy(t *testing.T) {
 		Convey("Then the returning status is WARNING", func() {
 
 			// Create health check object
-			hc := HealthCheck{
-				Version:              testVersion,
-				StartTime:            t0,
-				criticalErrorTimeout: criticalErrTimeout,
-				tickers:              nil,
-			}
+			hc := getTestHealthCheck(t0, criticalErrTimeout)
 
 			// Adding two healthy checks
 			statuses := []CheckState{healthyCheck, warningCheck}
@@ -369,13 +329,8 @@ func TestIsAppHealthy(t *testing.T) {
 		Convey("Then the returning status is WARNING", func() {
 
 			// Create health check object
-			hc := HealthCheck{
-				Version:                  testVersion,
-				StartTime:                t20,
-				criticalErrorTimeout:     criticalErrTimeout,
-				tickers:                  nil,
-				timeOfFirstCriticalError: t1,
-			}
+			hc := getTestHealthCheck(t20, criticalErrTimeout)
+			hc.timeOfFirstCriticalError = t1
 
 			// Adding two healthy checks
 			statuses := []CheckState{healthyCheck, criticalCheck}
@@ -391,13 +346,8 @@ func TestIsAppHealthy(t *testing.T) {
 		Convey("Then the returning status is CRITICAL", func() {
 
 			// Create health check object
-			hc := HealthCheck{
-				Version:                  testVersion,
-				StartTime:                t20,
-				criticalErrorTimeout:     criticalErrTimeout,
-				tickers:                  nil,
-				timeOfFirstCriticalError: t10,
-			}
+			hc := getTestHealthCheck(t20, criticalErrTimeout)
+			hc.timeOfFirstCriticalError = t10
 
 			// Adding two healthy checks
 			statuses := []CheckState{healthyCheck, criticalCheck}
@@ -413,13 +363,8 @@ func TestIsAppHealthy(t *testing.T) {
 		Convey("Then the returning status is WARNING", func() {
 
 			// Create health check object
-			hc := HealthCheck{
-				Version:                  testVersion,
-				StartTime:                t20,
-				criticalErrorTimeout:     criticalErrTimeout,
-				tickers:                  nil,
-				timeOfFirstCriticalError: t1,
-			}
+			hc := getTestHealthCheck(t20, criticalErrTimeout)
+			hc.timeOfFirstCriticalError = t1
 
 			// Adding two healthy checks
 			statuses := []CheckState{warningCheck, criticalCheck}
@@ -435,13 +380,8 @@ func TestIsAppHealthy(t *testing.T) {
 		Convey("Then the returning status is CRITICAL", func() {
 
 			// Create health check object
-			hc := HealthCheck{
-				Version:                  testVersion,
-				StartTime:                t20,
-				criticalErrorTimeout:     criticalErrTimeout,
-				tickers:                  nil,
-				timeOfFirstCriticalError: t10,
-			}
+			hc := getTestHealthCheck(t20, criticalErrTimeout)
+			hc.timeOfFirstCriticalError = t10
 
 			// Adding two healthy checks
 			statuses := []CheckState{warningCheck, criticalCheck}
@@ -527,12 +467,7 @@ func TestHandlerSingleCheck(t *testing.T) {
 
 	Convey("Given a healthcheck with no past failures or successes", t, func() {
 
-		hc := HealthCheck{
-			Version:              testVersion,
-			StartTime:            t0,
-			criticalErrorTimeout: criticalErrTimeout,
-			tickers:              nil,
-		}
+		hc := getTestHealthCheck(t0, criticalErrTimeout)
 
 		Convey("Then an empty check should result in the app reporting back as warning", func() {
 			statuses := []CheckState{nilStatus}
@@ -588,13 +523,8 @@ func TestHandlerSingleCheck(t *testing.T) {
 
 	Convey("Given a healthcheck with a recent past critical check (timeout not expired), and no success received since", t, func() {
 
-		hc := HealthCheck{
-			Version:                  testVersion,
-			StartTime:                t0,
-			criticalErrorTimeout:     criticalErrTimeout,
-			timeOfFirstCriticalError: t10,
-			tickers:                  nil,
-		}
+		hc := getTestHealthCheck(t0, criticalErrTimeout)
+		hc.timeOfFirstCriticalError = t10
 
 		Convey("Then a healthy check should result in the app reporting back as healthy", func() {
 			statuses := []CheckState{healthyNeverUnhealthyStatus}
@@ -622,13 +552,8 @@ func TestHandlerSingleCheck(t *testing.T) {
 
 	Convey("Given a healthcheck with an old past critical check (timeout expired), and no success received since", t, func() {
 
-		hc := HealthCheck{
-			Version:                  testVersion,
-			StartTime:                t0,
-			criticalErrorTimeout:     criticalErrTimeout,
-			timeOfFirstCriticalError: t20,
-			tickers:                  nil,
-		}
+		hc := getTestHealthCheck(t0, criticalErrTimeout)
+		hc.timeOfFirstCriticalError = t20
 
 		Convey("Then a healthy check should result in the app reporting back as healthy", func() {
 			statuses := []CheckState{healthyNeverUnhealthyStatus}
@@ -761,14 +686,10 @@ func TestHandlerMultipleChecks(t *testing.T) {
 	Convey("Given no apps", t, func() {
 		var checks []*Check
 		var statuses []CheckState
-		hc := HealthCheck{
-			Checks:                   checks,
-			Version:                  testVersion,
-			StartTime:                testStartTime,
-			criticalErrorTimeout:     10 * time.Minute,
-			timeOfFirstCriticalError: testStartTime.Add(-30 * time.Minute),
-			tickers:                  nil,
-		}
+		hc := getTestHealthCheck(testStartTime, 10*time.Minute)
+		hc.timeOfFirstCriticalError = testStartTime.Add(-30 * time.Minute)
+		hc.Checks = checks
+
 		runHealthHandlerAndTest(t, &hc, StatusOK, testVersion, testStartTime, statuses, http.StatusOK)
 	})
 }
@@ -796,13 +717,8 @@ func createATestCheck(stateToReturn CheckState, hasPreviousCheck bool) *Check {
 }
 
 func createHealthCheck(statuses []CheckState, startTime time.Time, critErrTimeout time.Duration, hasPreviousCheck bool) HealthCheck {
-	hc := HealthCheck{
-		Checks:               createChecksSlice(statuses, hasPreviousCheck),
-		Version:              testVersion,
-		StartTime:            startTime,
-		criticalErrorTimeout: critErrTimeout,
-		tickers:              nil,
-	}
+	hc := getTestHealthCheck(startTime, critErrTimeout)
+	hc.Checks = createChecksSlice(statuses, hasPreviousCheck)
 	return hc
 }
 

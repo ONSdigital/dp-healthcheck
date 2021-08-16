@@ -16,7 +16,8 @@ func (hc *HealthCheck) Handler(w http.ResponseWriter, req *http.Request) {
 	now := time.Now().UTC()
 	ctx := req.Context()
 
-	hc.Status = hc.getStatus(ctx)
+	newStatus := hc.getAppStatus(ctx)
+	hc.SetStatus(newStatus)
 	hc.Uptime = now.Sub(hc.StartTime) / time.Millisecond
 
 	b, err := json.Marshal(hc)
@@ -27,7 +28,7 @@ func (hc *HealthCheck) Handler(w http.ResponseWriter, req *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
-	switch hc.Status {
+	switch newStatus {
 	case StatusOK:
 		w.WriteHeader(http.StatusOK)
 	case StatusWarning:
@@ -53,8 +54,8 @@ func (hc *HealthCheck) isAppStartingUp() bool {
 	return false
 }
 
-// getStatus returns a status as string as to the overall current apps health based on its dependent apps health
-func (hc *HealthCheck) getStatus(ctx context.Context) string {
+// getAppStatus returns a status as string as to the overall current apps health based on its dependent apps health
+func (hc *HealthCheck) getAppStatus(ctx context.Context) string {
 	if hc.isAppStartingUp() {
 		log.Warn(ctx, "a dependency is still starting up")
 		return StatusWarning
