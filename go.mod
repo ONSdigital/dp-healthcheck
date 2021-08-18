@@ -1,6 +1,6 @@
 module github.com/ONSdigital/dp-healthcheck
 
-go 1.15
+go 1.16
 
 replace github.com/coreos/etcd v3.3.13+incompatible => github.com/etcd-io/etcd v3.3.25+incompatible
 
