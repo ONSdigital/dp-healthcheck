@@ -1,20 +1,19 @@
-dp-healthcheck
-==============
+# dp-healthcheck
 
-A health check git repository for Digital Publishing that implements the [Health Check Specification](https://github.com/ONSdigital/dp/blob/master/standards/HEALTH_CHECK_SPECIFICATION.md).  All Digital Publishing apps must implement a health check using this library.  Functions that implement the `Checker` type are registered with the library which will check internal and external measures of the apps health.  The library will then call these functions periodically to determine the overall health of the app and report this back using the included handler.
+A health check library for ONS Digital Publishing that implements the [Health Check Specification](https://github.com/ONSdigital/dp/blob/master/standards/HEALTH_CHECK_SPECIFICATION.md).
 
-Getting started
----------------
+All Digital Publishing apps must implement a health check using this library.  Functions that implement the `Checker` type are registered with the library which will check internal and external measures of the app's health.  The library will then call these functions periodically to determine the overall health of the app and report this back using the included handler.
+
+## Getting started
 
 * [Add health check to an app](#adding-a-health-check-to-an-app)
 * [Implementing a `Checker` function](#implementing-a-checker)
 
-Adding a health check to an app
--------------------------------
+## Adding a health check to an app
 
 1. Import the library and your HTTP server dependencies:
 
-    ```
+    ```go
     package main
 
     import (
@@ -28,7 +27,7 @@ Adding a health check to an app
 
 2. Create a new version object defining the version of your app:
 
-    ```
+    ```go
     ...
 
     var BuildTime, GitCommit, Version string
@@ -55,11 +54,11 @@ Adding a health check to an app
         ...
     ```
 
-2. Initialise any clients that have `Checker` type functions you wish to use
+3. Initialise any clients that have `Checker` type functions you wish to use
 
-3. Instantiate the health check library:
+4. Instantiate the health check library:
 
-    ```
+    ```go
         ...
 
         hc, err := health.New(versionInfo criticalTimeout, interval)
@@ -70,9 +69,9 @@ Adding a health check to an app
         ...
     ```
 
-4. Register your `Checker` functions providing a short human readable name for each (it is best to try to keep the name consistent between apps where possible):
+5. Register your `Checker` functions providing a short human readable name for each (it is best to try to keep the name consistent between apps where possible):
 
-    ```
+    ```go
         ...
 
         if err = hc.AddCheck("check 1", CheckFunc1); err != nil {
@@ -85,9 +84,9 @@ Adding a health check to an app
         ...
     ```
 
-5. Register the health handler:
+6. Register the health handler:
 
-    ```
+    ```go
         ...
 
         r := mux.NewRouter()
@@ -96,9 +95,9 @@ Adding a health check to an app
         ...
     ```
 
-6. Start the health check library:
+7. Start the health check library:
 
-    ```
+    ```go
         ...
 
         hc.Start(ctx)
@@ -106,9 +105,9 @@ Adding a health check to an app
         ...
     ```
 
-7. Start the HTTP server:
+8. Start the HTTP server:
 
-    ```
+    ```go
         ...
 
         s := dphttp.NewServer(":8080", r
@@ -119,9 +118,9 @@ Adding a health check to an app
         ...
     ```
 
-8. Then gracefully shutdown the health check library:
+9. Then gracefully shutdown the health check library:
 
-    ```
+    ```go
         ...
 
         hc.Stop()
@@ -130,17 +129,17 @@ Adding a health check to an app
     }
     ```
 
-9. Set the `BuildTime`, `GitCommit` and `Version` during compile:
+10. Set the `BuildTime`, `GitCommit` and `Version` during compile:
 
     Command line:
 
-    ```
+    ```sh
     BUILD_TIME="$(date +%s)" GIT_COMMIT="$(git rev-parse HEAD)" VERSION="$(git tag --points-at HEAD | grep ^v | head -n 1)" go build -ldflags="-X 'main.BuildTime=$BUILD_TIME' -X 'main.GitCommit=$GIT_COMMIT' -X 'main.Version=$VERSION'"
     ```
 
     Makefile:
 
-    ```
+    ```sh
     ...
     APP_NAME = app-name
 
@@ -166,8 +165,7 @@ Adding a health check to an app
     ...
     ```
 
-Implementing a checker
-----------------------
+## Implementing a checker
 
 Each checker measures the health of something that is required for an app to function.  This could be something internal to the app (e.g. latency, error rate, saturation, etc.) or something external (e.g. the health of an upstream app, connection to a data store, etc.).  Each checker is a function that gets the current state of whatever it is responsible for checking.
 
@@ -175,7 +173,7 @@ Implement a checker by creating a function (with or without a receiver) that is 
 
 For example:
 
-```
+```go
 func Check(ctx context.Context, state *CheckState) error {
 	success := rand.Float32() < 0.5
 	warn := rand.Float32() < 0.5
@@ -193,12 +191,12 @@ func Check(ctx context.Context, state *CheckState) error {
 
 Note that the `statusCode` argument (last argument) to `CheckState.Update()` is only used for HTTP based checks.  If you do not have a status code then pass `0` as seen in the example above (degraded state/warning block).
 
-### Contributing
+## Contributing
 
 See [CONTRIBUTING](CONTRIBUTING.md) for details.
 
-### License
+## License
 
-Copyright © 2019-2020, Office for National Statistics (https://www.ons.gov.uk)
+Copyright © 2019-2021, Office for National Statistics [https://www.ons.gov.uk](https://www.ons.gov.uk)
 
 Released under MIT license, see [LICENSE](LICENSE.md) for details.

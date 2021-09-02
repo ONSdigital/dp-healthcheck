@@ -24,6 +24,7 @@ type HealthCheck struct {
 	tickers                  []*ticker
 	context                  context.Context
 	tickersWaitgroup         *sync.WaitGroup
+	statusLock               *sync.RWMutex
 }
 
 // VersionInfo represents the version information of an app
@@ -47,6 +48,7 @@ func New(version VersionInfo, criticalTimeout, interval time.Duration) HealthChe
 		interval:             interval,
 		tickers:              []*ticker{},
 		tickersWaitgroup:     &sync.WaitGroup{},
+		statusLock:           &sync.RWMutex{},
 	}
 }
 
@@ -107,4 +109,20 @@ func (hc *HealthCheck) Stop() {
 		ticker.stop()
 	}
 	hc.tickersWaitgroup.Wait()
+}
+
+// GetStatus returns the current status in a thread-safe way
+func (hc *HealthCheck) GetStatus() string {
+	hc.statusLock.RLock()
+	defer hc.statusLock.RUnlock()
+	return hc.Status
+}
+
+// SetStatus sets the current status in a thread-safe way,
+// returns the new status
+func (hc *HealthCheck) SetStatus(newStatus string) string {
+	hc.statusLock.Lock()
+	defer hc.statusLock.Unlock()
+	hc.Status = newStatus
+	return newStatus
 }

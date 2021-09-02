@@ -16,7 +16,8 @@ func (hc *HealthCheck) Handler(w http.ResponseWriter, req *http.Request) {
 	now := time.Now().UTC()
 	ctx := req.Context()
 
-	hc.Status = hc.getStatus(ctx)
+	newStatus := hc.getAppStatus(ctx)
+	hc.SetStatus(newStatus)
 	hc.Uptime = now.Sub(hc.StartTime) / time.Millisecond
 
 	b, err := json.Marshal(hc)
@@ -27,7 +28,7 @@ func (hc *HealthCheck) Handler(w http.ResponseWriter, req *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
-	switch hc.Status {
+	switch newStatus {
 	case StatusOK:
 		w.WriteHeader(http.StatusOK)
 	case StatusWarning:
@@ -53,8 +54,8 @@ func (hc *HealthCheck) isAppStartingUp() bool {
 	return false
 }
 
-// getStatus returns a status as string as to the overall current apps health based on its dependent apps health
-func (hc *HealthCheck) getStatus(ctx context.Context) string {
+// getAppStatus returns a status as string as to the overall current apps health based on its dependent apps health
+func (hc *HealthCheck) getAppStatus(ctx context.Context) string {
 	if hc.isAppStartingUp() {
 		log.Warn(ctx, "a dependency is still starting up")
 		return StatusWarning
@@ -62,7 +63,11 @@ func (hc *HealthCheck) getStatus(ctx context.Context) string {
 	return hc.isAppHealthy()
 }
 
-// isAppHealthy checks every check for their health then produces and returns a status for this apps health
+// isAppHealthy checks individual Checks for their health then produces
+// and returns the 'worst' of those statuses as this app's health
+// (i.e. if any are StatusCritical, return that,
+//          else if any are StatusWarning, return that,
+//          else return StatusOK)
 func (hc *HealthCheck) isAppHealthy() string {
 	status := StatusOK
 	for _, check := range hc.Checks {
@@ -76,7 +81,7 @@ func (hc *HealthCheck) isAppHealthy() string {
 	return status
 }
 
-// getCheckStatus returns a string for the status on if an individual check
+// getCheckStatus returns a string for the status on an individual check
 func (hc *HealthCheck) getCheckStatus(c *Check) string {
 	switch c.state.Status() {
 	case StatusOK:
