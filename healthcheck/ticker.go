@@ -30,6 +30,11 @@ func createTicker(interval time.Duration, check *Check) *ticker {
 func (ticker *ticker) start(ctx context.Context, wg *sync.WaitGroup) {
 	go func() {
 		defer close(ticker.closed)
+
+		// first run check once on application start
+		wg.Add(1)
+		ticker.runCheck(ctx, wg)
+
 		for {
 			select {
 			case <-ctx.Done():
@@ -42,10 +47,6 @@ func (ticker *ticker) start(ctx context.Context, wg *sync.WaitGroup) {
 			}
 		}
 	}()
-
-	// run check as a one of on application start
-	wg.Add(1)
-	ticker.runCheck(ctx, wg)
 }
 
 // runCheck runs a checker function of the check associated with the ticker, notifying the provided waitgroup
