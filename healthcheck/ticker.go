@@ -42,11 +42,14 @@ func (ticker *ticker) start(ctx context.Context, wg *sync.WaitGroup) {
 			}
 		}
 	}()
+
+	// run check as a one of on application start
+	wg.Add(1)
+	ticker.runCheck(ctx, wg)
 }
 
 // runCheck runs a checker function of the check associated with the ticker, notifying the provided waitgroup
 func (ticker *ticker) runCheck(ctx context.Context, wg *sync.WaitGroup) {
-
 	defer wg.Done()
 
 	err := ticker.check.checker(ctx, ticker.check.state)
