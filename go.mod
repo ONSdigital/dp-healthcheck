@@ -1,16 +1,22 @@
 module github.com/ONSdigital/dp-healthcheck
 
-go 1.16
-
-replace github.com/coreos/etcd v3.3.13+incompatible => github.com/etcd-io/etcd v3.3.25+incompatible
-
-replace github.com/gogo/protobuf v1.2.1 => github.com/gogo/protobuf v1.3.2
+go 1.17
 
 require (
-	github.com/ONSdigital/dp-api-clients-go v1.42.0 // indirect
 	github.com/ONSdigital/log.go/v2 v2.0.5
 	github.com/google/go-cmp v0.5.5
-	github.com/gopherjs/gopherjs v0.0.0-20210803090616-8f023c250c89 // indirect
 	github.com/smartystreets/goconvey v1.6.4
-	golang.org/x/sys v0.0.0-20210816032535-30e4713e60e3 // indirect
+)
+
+require (
+	github.com/ONSdigital/dp-api-clients-go v1.34.3 // indirect
+	github.com/ONSdigital/dp-net v1.0.12 // indirect
+	github.com/fatih/color v1.10.0 // indirect
+	github.com/gopherjs/gopherjs v0.0.0-20181017120253-0766667cb4d1 // indirect
+	github.com/hokaccha/go-prettyjson v0.0.0-20210113012101-fb4e108d2519 // indirect
+	github.com/jtolds/gls v4.20.0+incompatible // indirect
+	github.com/mattn/go-colorable v0.1.8 // indirect
+	github.com/mattn/go-isatty v0.0.12 // indirect
+	github.com/smartystreets/assertions v0.0.0-20180927180507-b2de0cb4f26d // indirect
+	golang.org/x/sys v0.0.0-20210414055047-fe65e336abe0 // indirect
 )
