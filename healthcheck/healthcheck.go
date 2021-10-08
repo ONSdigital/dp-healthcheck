@@ -25,6 +25,8 @@ type HealthCheck struct {
 	context                  context.Context
 	tickersWaitgroup         *sync.WaitGroup
 	statusLock               *sync.RWMutex
+	subscribers              map[Subscriber][]*Check
+	subsMutex                *sync.Mutex
 }
 
 // VersionInfo represents the version information of an app
@@ -49,6 +51,8 @@ func New(version VersionInfo, criticalTimeout, interval time.Duration) HealthChe
 		tickers:              []*ticker{},
 		tickersWaitgroup:     &sync.WaitGroup{},
 		statusLock:           &sync.RWMutex{},
+		subscribers:          map[Subscriber][]*Check{},
+		subsMutex:            &sync.Mutex{},
 	}
 }
 
@@ -79,6 +83,7 @@ func (hc *HealthCheck) AddCheck(name string, checker Checker) (err error) {
 	if err != nil {
 		return err
 	}
+	check.state.changeCallback = hc.healthChangeCallback
 
 	hc.Checks = append(hc.Checks, check)
 

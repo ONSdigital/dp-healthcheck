@@ -148,7 +148,7 @@ func TestNew(t *testing.T) {
 			hc.tickers[0].check.state.mutex.RUnlock()
 
 			s.mutex = nil
-			So(s, ShouldResemble, CheckState{name: "failing check"})
+			So(s.name, ShouldEqual, "failing check")
 		})
 	})
 

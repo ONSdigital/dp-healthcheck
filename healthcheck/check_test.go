@@ -52,10 +52,15 @@ func TestUpdate(t *testing.T) {
 	)
 
 	Convey("Given a new check state", t, func() {
+		cbkCalls := 0
+		cbk := func() *sync.WaitGroup {
+			cbkCalls++
+			return &sync.WaitGroup{}
+		}
+
 		before := time.Now().UTC()
-
 		state := NewCheckState(checkName)
-
+		state.changeCallback = cbk
 		So(state.name, ShouldEqual, checkName)
 
 		Convey("When the state is updated with OK status", func() {
@@ -72,14 +77,23 @@ func TestUpdate(t *testing.T) {
 				So(*state.lastChecked, ShouldHappenOnOrBetween, before, after)
 				So(*state.lastSuccess, ShouldHappenOnOrBetween, before, after)
 			})
+
+			Convey("Then the state-change callback is called", func() {
+				So(cbkCalls, ShouldEqual, 1)
+			})
 		})
 	})
 
 	Convey("Given a new check state", t, func() {
+		cbkCalls := 0
+		cbk := func() *sync.WaitGroup {
+			cbkCalls++
+			return &sync.WaitGroup{}
+		}
+
 		before := time.Now().UTC()
-
 		state := NewCheckState(checkName)
-
+		state.changeCallback = cbk
 		So(state.name, ShouldEqual, checkName)
 
 		Convey("When the state is updated with warning status", func() {
@@ -96,14 +110,23 @@ func TestUpdate(t *testing.T) {
 				So(*state.lastChecked, ShouldHappenOnOrBetween, before, after)
 				So(*state.lastFailure, ShouldHappenOnOrBetween, before, after)
 			})
+
+			Convey("Then the state-change callback is called", func() {
+				So(cbkCalls, ShouldEqual, 1)
+			})
 		})
 	})
 
 	Convey("Given a new check state with valid existing state", t, func() {
+		cbkCalls := 0
+		cbk := func() *sync.WaitGroup {
+			cbkCalls++
+			return &sync.WaitGroup{}
+		}
+
 		before := time.Now().UTC()
-
 		state := NewCheckState(checkName)
-
+		state.changeCallback = cbk
 		So(state.name, ShouldEqual, checkName)
 
 		Convey("When the state is updated with critical status", func() {
@@ -120,12 +143,15 @@ func TestUpdate(t *testing.T) {
 				So(*state.lastChecked, ShouldHappenOnOrBetween, before, after)
 				So(*state.lastFailure, ShouldHappenOnOrBetween, before, after)
 			})
+
+			Convey("Then the state-change callback is called", func() {
+				So(cbkCalls, ShouldEqual, 1)
+			})
 		})
 	})
 
 	Convey("Given a new check state", t, func() {
 		before := time.Now().UTC()
-
 		state := NewCheckState(checkName)
 
 		err := state.Update(StatusOK, okMessage, 200)
@@ -140,12 +166,19 @@ func TestUpdate(t *testing.T) {
 		So(*state.lastChecked, ShouldHappenOnOrBetween, before, after)
 		So(*state.lastSuccess, ShouldHappenOnOrBetween, before, after)
 
-		Convey("When the state is updated with another state", func() {
+		Convey("When the state is updated with a different state", func() {
+			cbkCalls := 0
+			cbk := func() *sync.WaitGroup {
+				cbkCalls++
+				return &sync.WaitGroup{}
+			}
+			state.changeCallback = cbk
+
 			before2 := time.Now().UTC()
 			err := state.Update(StatusCritical, failMessage, 0)
 			So(err, ShouldBeNil)
 
-			Convey("Then then only the changed fields should overwitten", func() {
+			Convey("Then only the changed fields should overwitten", func() {
 				after2 := time.Now().UTC()
 
 				So(state.name, ShouldEqual, checkName)
@@ -156,17 +189,60 @@ func TestUpdate(t *testing.T) {
 				So(*state.lastFailure, ShouldHappenOnOrBetween, before2, after2)
 				So(*state.lastSuccess, ShouldHappenOnOrBetween, before, after)
 			})
+
+			Convey("Then the state-change callback is called", func() {
+				So(cbkCalls, ShouldEqual, 1)
+			})
+		})
+
+		Convey("When the state is updated with the same state value", func() {
+			cbkCalls := 0
+			cbk := func() *sync.WaitGroup {
+				cbkCalls++
+				return &sync.WaitGroup{}
+			}
+			state.changeCallback = cbk
+
+			before2 := time.Now().UTC()
+			err := state.Update(StatusOK, "some message", 0)
+			So(err, ShouldBeNil)
+
+			Convey("Then only the changed fields should overwitten", func() {
+				after2 := time.Now().UTC()
+
+				So(state.name, ShouldEqual, checkName)
+				So(state.status, ShouldEqual, StatusOK)
+				So(state.message, ShouldEqual, "some message")
+				So(state.statusCode, ShouldEqual, 0)
+				So(*state.lastChecked, ShouldHappenOnOrBetween, before2, after2)
+				So(state.lastFailure, ShouldBeNil)
+				So(*state.lastSuccess, ShouldHappenOnOrBetween, before2, after2)
+			})
+
+			Convey("Then the state-change callback is not called", func() {
+				So(cbkCalls, ShouldEqual, 0)
+			})
 		})
 	})
 
 	Convey("Given a new check state with valid existing state", t, func() {
+		cbkCalls := 0
+		cbk := func() *sync.WaitGroup {
+			cbkCalls++
+			return &sync.WaitGroup{}
+		}
 		state := NewCheckState(checkName)
+		state.changeCallback = cbk
 
 		Convey("When the state is updated with an invalid status", func() {
 			err := state.Update("some invalid status", failMessage, 502)
 
 			Convey("Then an error should be returned", func() {
 				So(err, ShouldNotBeNil)
+			})
+
+			Convey("Then the state-change callback is not called", func() {
+				So(cbkCalls, ShouldEqual, 0)
 			})
 		})
 	})

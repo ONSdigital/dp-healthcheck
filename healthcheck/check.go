@@ -21,14 +21,15 @@ type Checker func(context.Context, *CheckState) error
 
 // CheckState represents the health status returned by a checker
 type CheckState struct {
-	name        string
-	status      string
-	statusCode  int
-	message     string
-	lastChecked *time.Time
-	lastSuccess *time.Time
-	lastFailure *time.Time
-	mutex       *sync.RWMutex
+	name           string
+	status         string
+	statusCode     int
+	message        string
+	lastChecked    *time.Time
+	lastSuccess    *time.Time
+	lastFailure    *time.Time
+	mutex          *sync.RWMutex
+	changeCallback func() *sync.WaitGroup
 }
 
 // checkStateJSON represents the health status struct for use with json marshal/unmarshal (to deal with unexported fields)
@@ -136,6 +137,10 @@ func (s *CheckState) Update(status, message string, statusCode int) error {
 		s.lastFailure = &now
 	default:
 		return fmt.Errorf("invalid check status, must be one of %s, %s or %s", StatusOK, StatusWarning, StatusCritical)
+	}
+
+	if s.status != status && s.changeCallback != nil {
+		s.changeCallback()
 	}
 
 	s.status = status

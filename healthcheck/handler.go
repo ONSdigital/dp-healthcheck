@@ -46,7 +46,11 @@ func (hc *HealthCheck) Handler(w http.ResponseWriter, req *http.Request) {
 
 // isAppStartingUp returns false when all clients have completed at least one check
 func (hc *HealthCheck) isAppStartingUp() bool {
-	for _, check := range hc.Checks {
+	return hc.areChecksStartingUp(hc.Checks)
+}
+
+func (hc *HealthCheck) areChecksStartingUp(checks []*Check) bool {
+	for _, check := range checks {
 		if !check.hasRun() {
 			return true
 		}
@@ -56,11 +60,18 @@ func (hc *HealthCheck) isAppStartingUp() bool {
 
 // getAppStatus returns a status as string as to the overall current apps health based on its dependent apps health
 func (hc *HealthCheck) getAppStatus(ctx context.Context) string {
-	if hc.isAppStartingUp() {
+	if hc.areChecksStartingUp(hc.Checks) {
 		log.Warn(ctx, "a dependency is still starting up")
 		return StatusWarning
 	}
-	return hc.isAppHealthy()
+	return hc.areChecksHealthy(hc.Checks)
+}
+
+func (hc *HealthCheck) getChecksStatus(checks []*Check) string {
+	if hc.areChecksStartingUp(checks) {
+		return StatusWarning
+	}
+	return hc.areChecksHealthy(checks)
 }
 
 // isAppHealthy checks individual Checks for their health then produces
@@ -69,8 +80,12 @@ func (hc *HealthCheck) getAppStatus(ctx context.Context) string {
 //          else if any are StatusWarning, return that,
 //          else return StatusOK)
 func (hc *HealthCheck) isAppHealthy() string {
+	return hc.areChecksHealthy(hc.Checks)
+}
+
+func (hc *HealthCheck) areChecksHealthy(checks []*Check) string {
 	status := StatusOK
-	for _, check := range hc.Checks {
+	for _, check := range checks {
 		checkStatus := hc.getCheckStatus(check)
 		if checkStatus == StatusCritical {
 			return StatusCritical
