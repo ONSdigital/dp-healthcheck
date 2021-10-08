@@ -81,6 +81,7 @@ func TestNew(t *testing.T) {
 
 		So(err, ShouldBeNil)
 		So(hc.Checks[0].checker, ShouldEqual, checkFunc)
+		So(hc.Checks[0].state.changeCallback, ShouldNotBeNil)
 		So(hc.Version.BuildTime, ShouldEqual, time.Unix(0, 0))
 		So(hc.Version.GitCommit, ShouldEqual, "d6cd1e2bd19e03a81132a23b2025920577f84e37")
 		So(hc.Version.Language, ShouldEqual, language)
@@ -111,6 +112,8 @@ func TestNew(t *testing.T) {
 		So(err2, ShouldBeNil)
 		So(hc.Checks[0].checker, ShouldEqual, checkFunc)
 		So(hc.Checks[1].checker, ShouldEqual, checkFunc)
+		So(hc.Checks[0].state.changeCallback, ShouldNotBeNil)
+		So(hc.Checks[1].state.changeCallback, ShouldNotBeNil)
 		So(hc.Version.BuildTime, ShouldEqual, time.Unix(0, 0))
 		So(hc.Version.GitCommit, ShouldEqual, "d6cd1e2bd19e03a81132a23b2025920577f84e37")
 		So(hc.Version.Language, ShouldEqual, language)
