@@ -7,6 +7,7 @@ All Digital Publishing apps must implement a health check using this library.  F
 ## Getting started
 
 * [Add health check to an app](#adding-a-health-check-to-an-app)
+* [Subscribing an app to health changes](#subscribing-an-app-to-health-changes)
 * [Implementing a `Checker` function](#implementing-a-checker)
 
 ## Adding a health check to an app
@@ -74,10 +75,10 @@ All Digital Publishing apps must implement a health check using this library.  F
     ```go
         ...
 
-        if err = hc.AddCheck("check 1", CheckFunc1); err != nil {
+        if _, err = hc.AddCheck("check 1", CheckFunc1); err != nil {
             ...
         }
-        if err = hc.AddCheck("mongoDB", &mongoClient.Checker); err != nil {
+        if _, err = hc.AddCheck("mongoDB", &mongoClient.Checker); err != nil {
             ...
         }
 
@@ -164,6 +165,45 @@ All Digital Publishing apps must implement a health check using this library.  F
 
     ...
     ```
+
+
+## Subscribing an app to health changes
+
+In step 5 of `Adding a health check to an app` you registered the checkers. Note that `AddCheck` returns a Check struct along with any error during AddCheck execution.
+
+If your app needs ot perform any action on a state change, you can subscribe it to the changes on a combined health state of a set of Checks.
+
+The subscriber must implement `Subscriber` interface, as defined here:
+
+    ```go
+    type Subscriber interface {
+        OnHealthUpdate(status string)
+    }
+    ```
+
+Example of a basic Subscriber implementation that logs the state change event:
+
+    ```go
+    type MySubscriber struct {
+    }
+
+    func (m *MySubscriber) OnHealthUpdate(status string) {
+        log.Info(context.Background(), "health update", log.Data{"status": status})
+    }
+    ```
+
+After calling AddCheck, you can register the returned checkers that you are interested in:
+
+    ```go
+    check1, err1 := hc.AddCheck("check 1", CheckFunc1)
+    _, err2 := hc.AddCheck("check 1", CheckFunc1)
+    check3, err3 := hc.AddCheck("check 1", CheckFunc1)
+
+	mySubscriber := &MySubscriber{}
+    hc.Subscribe(mySubscriber, check1, check3)
+    ```
+
+The `OnHealthUpdate` function will be invoked every time there is a change in any of the checkers, with the combined state of the checkers you are subscribed to as a parameter. Note that the combined state might not change from one call to another.
 
 ## Implementing a checker
 
