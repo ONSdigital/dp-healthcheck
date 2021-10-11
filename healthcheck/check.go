@@ -124,11 +124,19 @@ func (s *CheckState) LastFailure() *time.Time {
 // status of the check, must be one of healthcheck.StatusOK, healthcheck.StatusWarning or healthcheck.StatusCritical
 // message briefly describing the check state
 // statusCode returned if the check was an HTTP check (optional, provide 0 if not relevant)
+// If any Subscriber is registered, the callback will be triggered if the state changed since last interation
 func (s *CheckState) Update(status, message string, statusCode int) error {
 	now := time.Now().UTC()
+	stateChanged := false
 
 	s.mutex.Lock()
-	defer s.mutex.Unlock()
+	defer func() {
+		s.mutex.Unlock()
+		// the callback needs to be triggered after unlocking in order to prevent having a deadlock
+		if stateChanged && s.changeCallback != nil {
+			s.changeCallback()
+		}
+	}()
 
 	switch status {
 	case StatusOK:
@@ -139,8 +147,8 @@ func (s *CheckState) Update(status, message string, statusCode int) error {
 		return fmt.Errorf("invalid check status, must be one of %s, %s or %s", StatusOK, StatusWarning, StatusCritical)
 	}
 
-	if s.status != status && s.changeCallback != nil {
-		s.changeCallback()
+	if s.status != status {
+		stateChanged = true
 	}
 
 	s.status = status
