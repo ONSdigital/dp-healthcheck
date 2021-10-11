@@ -78,10 +78,10 @@ func NewVersionInfo(buildTime, gitCommit, version string) (VersionInfo, error) {
 }
 
 // AddCheck adds a provided checker to the health check
-func (hc *HealthCheck) AddCheck(name string, checker Checker) (err error) {
-	check, err := NewCheck(name, checker)
+func (hc *HealthCheck) AddCheck(name string, checker Checker) (check *Check, err error) {
+	check, err = NewCheck(name, checker)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	check.state.changeCallback = hc.healthChangeCallback
 
@@ -94,7 +94,7 @@ func (hc *HealthCheck) AddCheck(name string, checker Checker) (err error) {
 		ticker.start(hc.context, hc.tickersWaitgroup)
 	}
 
-	return nil
+	return check, nil
 }
 
 // Start begins each ticker, this is used to run the health checks on dependent apps

@@ -75,11 +75,12 @@ func TestNew(t *testing.T) {
 		ctx := context.Background()
 		timeBeforeCreation := time.Now().UTC()
 		hc := New(version, criticalTimeout, interval)
-		err := hc.AddCheck("check 1", checkFunc)
+		c, err := hc.AddCheck("check 1", checkFunc)
 		hc.Start(ctx)
 		defer hc.Stop()
 
 		So(err, ShouldBeNil)
+		So(c, ShouldEqual, hc.Checks[0])
 		So(hc.Checks[0].checker, ShouldEqual, checkFunc)
 		So(hc.Checks[0].state.changeCallback, ShouldNotBeNil)
 		So(hc.Version.BuildTime, ShouldEqual, time.Unix(0, 0))
@@ -103,13 +104,15 @@ func TestNew(t *testing.T) {
 		ctx := context.Background()
 		timeBeforeCreation := time.Now().UTC()
 		hc := New(version, criticalTimeout, interval)
-		err1 := hc.AddCheck("check 1", checkFunc)
-		err2 := hc.AddCheck("check 2", checkFunc)
+		c1, err1 := hc.AddCheck("check 1", checkFunc)
+		c2, err2 := hc.AddCheck("check 2", checkFunc)
 		hc.Start(ctx)
 		defer hc.Stop()
 
 		So(err1, ShouldBeNil)
 		So(err2, ShouldBeNil)
+		So(c1, ShouldEqual, hc.Checks[0])
+		So(c2, ShouldEqual, hc.Checks[1])
 		So(hc.Checks[0].checker, ShouldEqual, checkFunc)
 		So(hc.Checks[1].checker, ShouldEqual, checkFunc)
 		So(hc.Checks[0].state.changeCallback, ShouldNotBeNil)
@@ -138,7 +141,7 @@ func TestNew(t *testing.T) {
 	Convey("Create a new Health Check and add a broken check function", t, func() {
 		ctx := context.Background()
 		hc := New(version, criticalTimeout, interval)
-		err := hc.AddCheck("failing check", cfFail)
+		_, err := hc.AddCheck("failing check", cfFail)
 		hc.Start(ctx)
 		defer hc.Stop()
 
@@ -158,7 +161,7 @@ func TestNew(t *testing.T) {
 	Convey("Given a Health Check with a cancellable context", t, func() {
 		ctx, cancel := context.WithCancel(context.Background())
 		hc := New(version, criticalTimeout, interval)
-		err := hc.AddCheck("cancellable", cfFail)
+		_, err := hc.AddCheck("cancellable", cfFail)
 		hc.Start(ctx)
 		// no `defer hc.Stop()` because of `cancel()`
 
@@ -190,7 +193,7 @@ func TestNew(t *testing.T) {
 
 		ctx := context.Background()
 		hc := New(version, criticalTimeout, interval)
-		err := hc.AddCheck(name, cfFail)
+		_, err := hc.AddCheck(name, cfFail)
 		hc.Checks[0].state.status = status
 		hc.Checks[0].state.message = message
 		hc.Checks[0].state.statusCode = statusCode
@@ -226,7 +229,7 @@ func TestAddCheck(t *testing.T) {
 		hc := New(version, criticalTimeout, interval)
 
 		Convey("After adding a check there should be one timer on start", func() {
-			err := hc.AddCheck("check 1", cf)
+			_, err := hc.AddCheck("check 1", cf)
 			So(err, ShouldBeNil)
 
 			hc.Start(ctx)
@@ -240,12 +243,12 @@ func TestAddCheck(t *testing.T) {
 	Convey("Given a Health Check with 1 registered check", t, func() {
 		ctx := context.Background()
 		hc := New(version, criticalTimeout, interval)
-		err := hc.AddCheck("check 1", cf)
+		_, err := hc.AddCheck("check 1", cf)
 
 		So(err, ShouldBeNil)
 
 		Convey("After adding the second check there should be two timers on start", func() {
-			err := hc.AddCheck("check 2", cf)
+			_, err := hc.AddCheck("check 2", cf)
 			So(err, ShouldBeNil)
 
 			hc.Start(ctx)
@@ -258,14 +261,14 @@ func TestAddCheck(t *testing.T) {
 
 	Convey("Given a Health Check with 1 check that is started", t, func() {
 		hc := New(version, criticalTimeout, interval)
-		err := hc.AddCheck("check 1", cf)
+		_, err := hc.AddCheck("check 1", cf)
 		hc.Start(context.Background())
 		defer hc.Stop()
 
 		So(err, ShouldBeNil)
 		origNumberOftickers := len(hc.tickers)
 		Convey("When you add another check", func() {
-			err := hc.AddCheck("check 2", cf)
+			_, err := hc.AddCheck("check 2", cf)
 			time.Sleep(2 * interval)
 			Convey("Then the number of tickers should increase by one", func() {
 				So(err, ShouldBeNil)
@@ -279,7 +282,7 @@ func TestAddCheck(t *testing.T) {
 		hc := New(version, criticalTimeout, interval)
 
 		Convey("Then adding a check with a nil checker function should fail", func() {
-			err := hc.AddCheck("nil check", nil)
+			_, err := hc.AddCheck("nil check", nil)
 			So(err, ShouldNotBeNil)
 
 			hc.Start(ctx)
@@ -349,7 +352,7 @@ func TestStop(t *testing.T) {
 	Convey("Given a Health Check with a long running checker", t, func() {
 
 		hc := New(version, criticalTimeout, interval)
-		err := hc.AddCheck("check 1", longRunningChecker)
+		_, err := hc.AddCheck("check 1", longRunningChecker)
 		So(err, ShouldBeNil)
 		hc.Start(context.Background())
 
@@ -367,11 +370,11 @@ func TestStop(t *testing.T) {
 	Convey("Given a Health Check with multiple long running checkers", t, func() {
 
 		hc := New(version, criticalTimeout, interval)
-		err := hc.AddCheck("check 1", emptyChecker)
+		_, err := hc.AddCheck("check 1", emptyChecker)
 		So(err, ShouldBeNil)
-		err = hc.AddCheck("check 2", emptyChecker)
+		_, err = hc.AddCheck("check 2", emptyChecker)
 		So(err, ShouldBeNil)
-		err = hc.AddCheck("check 3", longRunningChecker)
+		_, err = hc.AddCheck("check 3", longRunningChecker)
 		So(err, ShouldBeNil)
 		hc.Start(context.Background())
 
