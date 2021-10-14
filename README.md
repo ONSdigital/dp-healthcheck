@@ -192,15 +192,32 @@ Example of a basic Subscriber implementation that logs the state change event:
     }
     ```
 
-After calling AddCheck, you can register the returned checkers that you are interested in:
+After calling AddCheck, you can register the returned checkers that you are interested in. You may call `Subscribe` multiple times to subscribe to more checks:
 
     ```go
-    check1, err1 := hc.AddCheck("check 1", CheckFunc1)
-    _, err2 := hc.AddCheck("check 1", CheckFunc1)
-    check3, err3 := hc.AddCheck("check 1", CheckFunc1)
+    mySubscriber := &MySubscriber{}
 
-	mySubscriber := &MySubscriber{}
-    hc.Subscribe(mySubscriber, check1, check3)
+    check1, err1 := hc.AddCheck("check 1", CheckFunc1)
+    _, err2 := hc.AddCheck("check 2", CheckFunc2)
+    hc.Subscribe(mySubscriber, check1, check2)
+
+    if(someFlag){
+        check3, err3 := hc.AddCheck("check 3", CheckFunc3)
+        hc.Subscribe(mySubscriber, check3)
+    }
+
+    ```
+
+Or you may register all the checks that have been added by calling `SubscribeAll`:
+
+    ```go
+    mySubscriber := &MySubscriber{}
+
+    check1, err1 := hc.AddCheck("check 1", CheckFunc1)
+    ...
+    checkN, errN := hc.AddCheck("check N", CheckFuncN)
+
+	hc.SubscribeAll(mySubscriber)
     ```
 
 The `OnHealthUpdate` function will be invoked every time there is a change in any of the checkers, with the combined state of the checkers you are subscribed to as a parameter. Note that the combined state might not change from one call to another.

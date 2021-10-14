@@ -17,21 +17,29 @@ func TestSubscribe(t *testing.T) {
 
 	Convey("Given a healthcheck with an empty list of subscribers", t, func() {
 		hc := &HealthCheck{
-			subscribers: map[Subscriber][]*Check{},
+			subscribers: map[Subscriber]map[*Check]struct{}{},
 			subsMutex:   &sync.Mutex{},
+			Checks:      []*Check{c1, c2, c3},
 		}
 
 		Convey("Then Subscribe a subscriber results in the internal map being modified accordingly", func() {
 			hc.Subscribe(s1, c1, c2)
-			So(hc.subscribers, ShouldResemble, map[Subscriber][]*Check{
-				s1: {c1, c2},
+			So(hc.subscribers, ShouldResemble, map[Subscriber]map[*Check]struct{}{
+				s1: {c1: {}, c2: {}},
 			})
 
-			Convey("Then Subscribe the same subscriber again with different checks results in the subscriber map being updated to only the new checks", func() {
+			Convey("Then Subscribe the same subscriber again with different checks results in the union of checks being subscribed", func() {
 				hc.Subscribe(s1, c1, c3)
-				So(hc.subscribers, ShouldResemble, map[Subscriber][]*Check{
-					s1: {c1, c3},
+				So(hc.subscribers, ShouldResemble, map[Subscriber]map[*Check]struct{}{
+					s1: {c1: {}, c2: {}, c3: {}},
 				})
+			})
+		})
+
+		Convey("Then calling SubscribeAll results in the subscriber being added to the map with all the checkers", func() {
+			hc.SubscribeAll(s1)
+			So(hc.subscribers, ShouldResemble, map[Subscriber]map[*Check]struct{}{
+				s1: {c1: {}, c2: {}, c3: {}},
 			})
 		})
 	})
@@ -46,24 +54,47 @@ func TestUnsubscribe(t *testing.T) {
 
 	Convey("Given a healthcheck with 2 subscribers and 2 checkers per subscriber", t, func() {
 		hc := &HealthCheck{
-			subscribers: map[Subscriber][]*Check{
-				sub1: {c1, c2},
-				sub2: {c2, c3},
+			subscribers: map[Subscriber]map[*Check]struct{}{
+				sub1: {c1: {}, c2: {}},
+				sub2: {c2: {}, c3: {}},
 			},
 			subsMutex: &sync.Mutex{},
+			Checks:    []*Check{c1, c2, c3},
 		}
 
 		Convey("Then Unsubscribe one subscriber results in only the expected item being removed from the internal map", func() {
-			hc.Unsubscribe(sub1)
-			So(hc.subscribers, ShouldResemble, map[Subscriber][]*Check{
-				sub2: {c2, c3},
+			hc.Unsubscribe(sub1, c2)
+			So(hc.subscribers, ShouldResemble, map[Subscriber]map[*Check]struct{}{
+				sub1: {c1: {}},
+				sub2: {c2: {}, c3: {}},
 			})
 
-			Convey("Then Unsubscribing the same subscriber again does not have any further effect", func() {
-				hc.Unsubscribe(sub1)
-				So(hc.subscribers, ShouldResemble, map[Subscriber][]*Check{
-					sub2: {c2, c3},
+			Convey("Then Unsubscribing the last check results in the subscriber being removed from the external map", func() {
+				hc.Unsubscribe(sub1, c1)
+				So(hc.subscribers, ShouldResemble, map[Subscriber]map[*Check]struct{}{
+					sub2: {c2: {}, c3: {}},
 				})
+			})
+		})
+
+		Convey("Then Calling UnsubscribeAll results in the subscriber being removed from the external map", func() {
+			hc.UnsubscribeAll(sub1)
+			So(hc.subscribers, ShouldResemble, map[Subscriber]map[*Check]struct{}{
+				sub2: {c2: {}, c3: {}},
+			})
+		})
+
+		Convey("Then Unsubscribing a subscriber that was not subscrived has no effect", func() {
+			hc.Unsubscribe(&mock.SubscriberMock{}, c1, c2)
+			So(hc.subscribers, ShouldResemble, map[Subscriber]map[*Check]struct{}{
+				sub1: {c1: {}, c2: {}},
+				sub2: {c2: {}, c3: {}},
+			})
+
+			hc.UnsubscribeAll(&mock.SubscriberMock{})
+			So(hc.subscribers, ShouldResemble, map[Subscriber]map[*Check]struct{}{
+				sub1: {c1: {}, c2: {}},
+				sub2: {c2: {}, c3: {}},
 			})
 		})
 	})
@@ -96,9 +127,9 @@ func TestNotifyHealthUpdate(t *testing.T) {
 
 	Convey("Given a healthcheck with 2 subscribers and 2 checkers per subscriber", t, func() {
 		hc := &HealthCheck{
-			subscribers: map[Subscriber][]*Check{
-				sub1: {c1, c2},
-				sub2: {c2, c3},
+			subscribers: map[Subscriber]map[*Check]struct{}{
+				sub1: {c1: {}, c2: {}},
+				sub2: {c2: {}, c3: {}},
 			},
 			subsMutex: &sync.Mutex{},
 		}

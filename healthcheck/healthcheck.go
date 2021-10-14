@@ -25,7 +25,7 @@ type HealthCheck struct {
 	context                  context.Context
 	tickersWaitgroup         *sync.WaitGroup
 	statusLock               *sync.RWMutex
-	subscribers              map[Subscriber][]*Check
+	subscribers              map[Subscriber]map[*Check]struct{}
 	subsMutex                *sync.Mutex
 }
 
@@ -51,7 +51,7 @@ func New(version VersionInfo, criticalTimeout, interval time.Duration) HealthChe
 		tickers:              []*ticker{},
 		tickersWaitgroup:     &sync.WaitGroup{},
 		statusLock:           &sync.RWMutex{},
-		subscribers:          map[Subscriber][]*Check{},
+		subscribers:          map[Subscriber]map[*Check]struct{}{},
 		subsMutex:            &sync.Mutex{},
 	}
 }

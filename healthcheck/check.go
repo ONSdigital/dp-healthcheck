@@ -161,10 +161,7 @@ func (s *CheckState) Update(status, message string, statusCode int) error {
 
 // hasRun returns true if the check has been run and has state
 func (c *Check) hasRun() bool {
-	if c.state.LastChecked() == nil {
-		return false
-	}
-	return true
+	return !(c.state.LastChecked() == nil)
 }
 
 // NewCheck returns a pointer to a new instantiated Check with
