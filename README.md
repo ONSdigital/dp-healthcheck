@@ -192,6 +192,9 @@ Example of a basic Subscriber implementation that logs the state change event:
     }
     ```
 
+As it stands, dp-kafka v3 ConsumerGroup is the only library that implements the Subscriber interface.
+It starts consuming messages on a healthy state and stops on an unhealthy state; hence we should be careful to subscribe a kafka consumer to only one healthcheck instance (multiple checks may be subscribed).
+
 After calling AddCheck, you can register the returned checkers that you are interested in. You may call `Subscribe` multiple times to subscribe to more checks:
 
     ```go

@@ -13,6 +13,8 @@ type Subscriber interface {
 // Subscribe will subscribe the subscriber to the provided checks.
 // This method may be called multiple times to subscribe to more checks and it is idempotent.
 // The subscriber will be notified of the accumulated state of the subscribed Checks every time that a check changes its state.
+// WARNING: A subscriber can be subscribed to multiple '*Check' structures,
+// but a subscriber must be subscribed to only one instance of a '*HealthCheck'.
 func (hc *HealthCheck) Subscribe(s Subscriber, checks ...*Check) {
 	hc.subsMutex.Lock()
 	defer hc.subsMutex.Unlock()
