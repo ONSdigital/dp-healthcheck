@@ -19,7 +19,7 @@ All Digital Publishing apps must implement a health check using this library.  F
 
     import (
         ...
-        health "github.com/ONSdigital/dp-healthcheck/healthcheck"
+        health "github.com/ONSdigital/dp-healthcheck/healthcheck/v2"
         dphttp "github.com/ONSdigital/dp-net/http"
         "github.com/gorilla/mux"
         ...
