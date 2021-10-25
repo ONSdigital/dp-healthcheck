@@ -78,7 +78,14 @@ func NewVersionInfo(buildTime, gitCommit, version string) (VersionInfo, error) {
 }
 
 // AddCheck adds a provided checker to the health check
-func (hc *HealthCheck) AddCheck(name string, checker Checker) (check *Check, err error) {
+func (hc *HealthCheck) AddCheck(name string, checker Checker) (err error) {
+	_, err = hc.AddAndGetCheck(name, checker)
+	return err
+}
+
+// AddAndGetCheck adds a provided checker to the health check
+// and returns the corresponding Check pointer, which maybe used for subscription
+func (hc *HealthCheck) AddAndGetCheck(name string, checker Checker) (check *Check, err error) {
 	check, err = NewCheck(name, checker)
 	if err != nil {
 		return nil, err

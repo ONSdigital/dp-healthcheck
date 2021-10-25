@@ -1,4 +1,4 @@
-module github.com/ONSdigital/dp-healthcheck/v2
+module github.com/ONSdigital/dp-healthcheck
 
 go 1.17
 
