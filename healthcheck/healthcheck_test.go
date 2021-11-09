@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"runtime"
+	"sync"
 	"testing"
 	"time"
 
@@ -201,6 +202,53 @@ func TestNew(t *testing.T) {
 			So(hc.Checks[0].state.lastChecked, ShouldEqual, &now)
 			So(hc.Checks[0].state.lastSuccess, ShouldEqual, &now)
 			hc.tickers[0].check.state.mutex.RUnlock()
+		})
+	})
+}
+
+func TestLoopAppStartingUp(t *testing.T) {
+	ctx := context.Background()
+	t0 := time.Now()
+	trackerTestTime := time.Millisecond + 2*interval
+
+	testHc := func(checks ...*Check) *HealthCheck {
+		return &HealthCheck{
+			criticalErrorTimeout: time.Millisecond,
+			interval:             interval,
+			tickersWaitgroup:     &sync.WaitGroup{},
+			statusLock:           &sync.RWMutex{},
+			Checks:               checks,
+		}
+	}
+
+	Convey("Given a healthcheck with a checker that has already run before", t, func() {
+		hc := testHc(&Check{
+			state: &CheckState{
+				mutex:       &sync.RWMutex{},
+				lastChecked: &t0,
+			},
+		})
+
+		Convey("Then Start triggers a tracker that sets the state to CRITICAL after the expected time", func() {
+			hc.Start(ctx)
+			defer hc.Stop()
+			time.Sleep(trackerTestTime)
+			So(hc.GetStatus(), ShouldEqual, StatusCritical)
+		})
+	})
+
+	Convey("Given a healthcheck with a checker that has not run before", t, func() {
+		hc := testHc(&Check{
+			state: &CheckState{
+				mutex: &sync.RWMutex{},
+			},
+		})
+
+		Convey("Then Start triggers a tracker that sets the state to WARNING after the expected time", func() {
+			hc.Start(ctx)
+			defer hc.Stop()
+			time.Sleep(trackerTestTime)
+			So(hc.GetStatus(), ShouldEqual, StatusWarning)
 		})
 	})
 }

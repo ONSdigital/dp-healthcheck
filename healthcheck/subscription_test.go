@@ -125,8 +125,9 @@ func TestNotifyHealthUpdate(t *testing.T) {
 		lastFailure: &t10,
 	}, true)
 
-	Convey("Given a healthcheck with 2 subscribers and 2 checkers per subscriber", t, func() {
+	Convey("Given a healthcheck with a total of 3 checks, 2 subscribers and 2 checkers per subscriber", t, func() {
 		hc := &HealthCheck{
+			Checks: []*Check{c1, c2, c3},
 			subscribers: map[Subscriber]map[*Check]struct{}{
 				sub1: {c1: {}, c2: {}},
 				sub2: {c2: {}, c3: {}},
@@ -135,14 +136,15 @@ func TestNotifyHealthUpdate(t *testing.T) {
 			subsMutex:  &sync.Mutex{},
 		}
 
-		Convey(`Then calling healthChangeCallback results in the status being updated for all the subscribers, 
-		according to the global health status of the subscribed checks for each subscriber`, func() {
+		Convey(`Then calling healthChangeCallback results in the global app status and the combined status for all the subscribers being updated`, func() {
+			So(hc.GetStatus(), ShouldEqual, "") // app status before callback
 			wg := hc.healthChangeCallback()
 			wg.Wait()
 			So(sub1.OnHealthUpdateCalls(), ShouldHaveLength, 1)
-			So(sub1.OnHealthUpdateCalls()[0].Status, ShouldEqual, StatusOK)
 			So(sub2.OnHealthUpdateCalls(), ShouldHaveLength, 1)
-			So(sub2.OnHealthUpdateCalls()[0].Status, ShouldEqual, StatusWarning)
+			So(sub1.OnHealthUpdateCalls()[0].Status, ShouldEqual, StatusOK)      // combined status of {c1, c2}
+			So(sub2.OnHealthUpdateCalls()[0].Status, ShouldEqual, StatusWarning) // combined status of {c2, c3}
+			So(hc.GetStatus(), ShouldEqual, StatusCritical)                      // app status after callback
 		})
 	})
 }

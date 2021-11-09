@@ -142,7 +142,7 @@ func (hc *HealthCheck) startTracker(ctx context.Context) {
 	}(ctx)
 }
 
-// loopAppStartingUp pools the app state until it has fully started (all checks have run)
+// loopAppStartingUp polls the app state until it has fully started (all checks have run)
 // - The polling period is 10% of the checkers interval, with jitter.
 // - The state is updated to 'WARNING' until the app has fully started: then it is updated to the real status according to checkers.
 func (hc *HealthCheck) loopAppStartingUp(ctx context.Context) {
