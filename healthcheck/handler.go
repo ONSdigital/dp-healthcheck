@@ -60,11 +60,11 @@ func (hc *HealthCheck) areChecksStartingUp(checks []*Check) bool {
 
 // getAppStatus returns a status as string as to the overall current apps health based on its dependent apps health
 func (hc *HealthCheck) getAppStatus(ctx context.Context) string {
-	if hc.areChecksStartingUp(hc.Checks) {
+	if hc.isAppStartingUp() {
 		log.Warn(ctx, "a dependency is still starting up")
 		return StatusWarning
 	}
-	return hc.areChecksHealthy(hc.Checks)
+	return hc.isAppHealthy()
 }
 
 func (hc *HealthCheck) getChecksStatus(checks []*Check) string {

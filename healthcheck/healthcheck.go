@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/ONSdigital/log.go/v2/log"
 )
 
 const language = "go"
@@ -27,6 +29,7 @@ type HealthCheck struct {
 	statusLock               *sync.RWMutex
 	subscribers              map[Subscriber]map[*Check]struct{}
 	subsMutex                *sync.Mutex
+	stopper                  chan struct{}
 }
 
 // VersionInfo represents the version information of an app
@@ -105,6 +108,8 @@ func (hc *HealthCheck) AddAndGetCheck(name string, checker Checker) (check *Chec
 }
 
 // Start begins each ticker, this is used to run the health checks on dependent apps
+// It also starts a go-routine to check the state after the criticalErrorTimeout has expired
+// until the app is fully started, to make sure the state is updated accordingly without relying on the http Handle being called
 // takes argument context and should utilise contextWithCancel
 // Passing a nil context will cause errors during stop/app shutdown
 func (hc *HealthCheck) Start(ctx context.Context) {
@@ -113,13 +118,66 @@ func (hc *HealthCheck) Start(ctx context.Context) {
 	for _, ticker := range hc.tickers {
 		ticker.start(ctx, hc.tickersWaitgroup)
 	}
+	hc.startTracker(ctx)
+}
+
+// startTracker creates a new go-routine to keep track of the app status after the critical timeout has expired
+// until all checkers have run, which is required in order to set the app status to Critical if any dependency is not healthy after the critical timeout.
+// Further updates will be performed by the callback when any checker state changes (or when the http handler is called)
+func (hc *HealthCheck) startTracker(ctx context.Context) {
+	hc.stopper = make(chan struct{})
+	hc.tickersWaitgroup.Add(1)
+	go func(ctx context.Context) {
+		defer hc.tickersWaitgroup.Done()
+		for {
+			select {
+			case <-time.After(hc.criticalErrorTimeout):
+				hc.loopAppStartingUp(ctx)
+			case <-ctx.Done():
+				return
+			case <-hc.stopper:
+				return
+			}
+		}
+	}(ctx)
+}
+
+// loopAppStartingUp pools the app state until it has fully started (all checks have run)
+// - The polling period is 10% of the checkers interval, with jitter.
+// - The state is updated to 'WARNING' until the app has fully started: then it is updated to the real status according to checkers.
+func (hc *HealthCheck) loopAppStartingUp(ctx context.Context) {
+	intervalWithJitter := calcIntervalWithJitter(hc.interval / 10)
+	for {
+		select {
+		case <-time.After(intervalWithJitter):
+			now := time.Now().UTC()
+			hc.Uptime = now.Sub(hc.StartTime) / time.Millisecond
+
+			if hc.isAppStartingUp() {
+				log.Warn(ctx, "a dependency is still starting up")
+				hc.SetStatus(StatusWarning)
+				continue
+			}
+
+			newStatus := hc.isAppHealthy()
+			hc.SetStatus(newStatus)
+			return
+
+		case <-ctx.Done():
+			return
+		case <-hc.stopper:
+			return
+		}
+	}
 }
 
 // Stop will cancel all tickers and thus stop all health checks
+// It also stops the go-routine that was created in start, if it is still alive.
 func (hc *HealthCheck) Stop() {
 	for _, ticker := range hc.tickers {
 		ticker.stop()
 	}
+	close(hc.stopper)
 	hc.tickersWaitgroup.Wait()
 }
 

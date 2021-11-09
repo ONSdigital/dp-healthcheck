@@ -1,7 +1,9 @@
 package healthcheck
 
 import (
+	"context"
 	"sync"
+	"time"
 )
 
 //go:generate moq -out ./mock/subscription.go -pkg mock . Subscriber
@@ -78,6 +80,13 @@ func (hc *HealthCheck) healthChangeCallback() *sync.WaitGroup {
 	hc.subsMutex.Lock()
 	defer hc.subsMutex.Unlock()
 
+	// Update global app status, so that we don't rely on `/health` being called
+	now := time.Now().UTC()
+	newStatus := hc.getAppStatus(context.Background())
+	hc.SetStatus(newStatus)
+	hc.Uptime = now.Sub(hc.StartTime) / time.Millisecond
+
+	// Notify all subscribers of the new health state for their subscribed checkers
 	for s, checks := range hc.subscribers {
 		checkList := []*Check{}
 		for check := range checks {

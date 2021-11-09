@@ -131,7 +131,8 @@ func TestNotifyHealthUpdate(t *testing.T) {
 				sub1: {c1: {}, c2: {}},
 				sub2: {c2: {}, c3: {}},
 			},
-			subsMutex: &sync.Mutex{},
+			statusLock: &sync.RWMutex{},
+			subsMutex:  &sync.Mutex{},
 		}
 
 		Convey(`Then calling healthChangeCallback results in the status being updated for all the subscribers, 
