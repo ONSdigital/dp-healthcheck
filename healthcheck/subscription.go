@@ -3,7 +3,6 @@ package healthcheck
 import (
 	"context"
 	"sync"
-	"time"
 )
 
 //go:generate moq -out ./mock/subscription.go -pkg mock . Subscriber
@@ -95,10 +94,8 @@ func (hc *HealthCheck) healthChangeCallback() *sync.WaitGroup {
 	}
 
 	// Update global app status, so that we don't rely on `/health` being called
-	now := time.Now().UTC()
 	newStatus := hc.getAppStatus(context.Background())
-	hc.SetStatus(newStatus)
-	hc.Uptime = now.Sub(hc.StartTime) / time.Millisecond
+	hc.SetStatusAndUptime(newStatus)
 
 	return wg
 }

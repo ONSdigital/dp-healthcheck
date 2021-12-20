@@ -150,17 +150,14 @@ func (hc *HealthCheck) loopAppStartingUp(ctx context.Context) {
 	for {
 		select {
 		case <-time.After(intervalWithJitter):
-			now := time.Now().UTC()
-			hc.Uptime = now.Sub(hc.StartTime) / time.Millisecond
-
 			if hc.isAppStartingUp() {
 				log.Warn(ctx, "a dependency is still starting up")
-				hc.SetStatus(StatusWarning)
+				hc.SetStatusAndUptime(StatusWarning)
 				continue
 			}
 
 			newStatus := hc.isAppHealthy()
-			hc.SetStatus(newStatus)
+			hc.SetStatusAndUptime(newStatus)
 			return
 
 		case <-ctx.Done():
@@ -194,5 +191,16 @@ func (hc *HealthCheck) SetStatus(newStatus string) string {
 	hc.statusLock.Lock()
 	defer hc.statusLock.Unlock()
 	hc.Status = newStatus
+	return newStatus
+}
+
+// SetStatusAndUptime sets the current status and update Uptime according to the current time in a thread-safe way,
+// returns the new status
+func (hc *HealthCheck) SetStatusAndUptime(newStatus string) string {
+	hc.statusLock.Lock()
+	defer hc.statusLock.Unlock()
+	now := time.Now().UTC()
+	hc.Status = newStatus
+	hc.Uptime = now.Sub(hc.StartTime) / time.Millisecond
 	return newStatus
 }
