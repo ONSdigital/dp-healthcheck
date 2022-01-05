@@ -13,10 +13,15 @@ var minTime = time.Unix(0, 0)
 
 // Handler responds to an http request for the current health status
 func (hc *HealthCheck) Handler(w http.ResponseWriter, req *http.Request) {
+	hc.statusLock.Lock()
+	defer hc.statusLock.Unlock()
+
+	now := time.Now().UTC()
 	ctx := req.Context()
 
 	newStatus := hc.getAppStatus(ctx)
-	hc.SetStatusAndUptime(newStatus)
+	hc.Status = newStatus
+	hc.Uptime = now.Sub(hc.StartTime) / time.Millisecond
 
 	b, err := json.Marshal(hc)
 	if err != nil {
