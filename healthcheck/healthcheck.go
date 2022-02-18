@@ -129,8 +129,8 @@ func (hc *HealthCheck) startTracker(ctx context.Context) {
 	hc.tickersWaitgroup.Add(1)
 	go func(ctx context.Context) {
 		defer hc.tickersWaitgroup.Done()
-		delay := time.NewTimer(hc.criticalErrorTimeout)
 		for {
+			delay := time.NewTimer(hc.criticalErrorTimeout)
 			select {
 			case <-delay.C:
 				hc.loopAppStartingUp(ctx)
