@@ -130,12 +130,23 @@ func (hc *HealthCheck) startTracker(ctx context.Context) {
 	go func(ctx context.Context) {
 		defer hc.tickersWaitgroup.Done()
 		for {
+			delay := time.NewTimer(hc.criticalErrorTimeout)
 			select {
-			case <-time.After(hc.criticalErrorTimeout):
+			case <-delay.C:
 				hc.loopAppStartingUp(ctx)
 			case <-ctx.Done():
+				// Ensure timer is stopped and its resources are freed
+				if !delay.Stop() {
+					// if the timer has been stopped then read from the channel
+					<-delay.C
+				}
 				return
 			case <-hc.stopper:
+				// Ensure timer is stopped and its resources are freed
+				if !delay.Stop() {
+					// if the timer has been stopped then read from the channel
+					<-delay.C
+				}
 				return
 			}
 		}
@@ -148,8 +159,9 @@ func (hc *HealthCheck) startTracker(ctx context.Context) {
 func (hc *HealthCheck) loopAppStartingUp(ctx context.Context) {
 	intervalWithJitter := calcIntervalWithJitter(hc.interval / 10)
 	for {
+		delay := time.NewTimer(intervalWithJitter)
 		select {
-		case <-time.After(intervalWithJitter):
+		case <-delay.C:
 			hc.statusLock.Lock()
 
 			now := time.Now().UTC()
@@ -168,8 +180,18 @@ func (hc *HealthCheck) loopAppStartingUp(ctx context.Context) {
 			return
 
 		case <-ctx.Done():
+			// Ensure timer is stopped and its resources are freed
+			if !delay.Stop() {
+				// if the timer has been stopped then read from the channel
+				<-delay.C
+			}
 			return
 		case <-hc.stopper:
+			// Ensure timer is stopped and its resources are freed
+			if !delay.Stop() {
+				// if the timer has been stopped then read from the channel
+				<-delay.C
+			}
 			return
 		}
 	}
