@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-//go:generate moq -out ./mock/subscription.go -pkg mock . Subscriber
+//go:generate moq -out subscription_mock_test.go . Subscriber
 
 type Subscriber interface {
 	OnHealthUpdate(status string)

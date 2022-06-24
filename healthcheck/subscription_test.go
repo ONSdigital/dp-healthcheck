@@ -5,12 +5,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ONSdigital/dp-healthcheck/healthcheck/mock"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestSubscribe(t *testing.T) {
-	s1 := &mock.SubscriberMock{}
+	s1 := &SubscriberMock{}
 	c1 := &Check{}
 	c2 := &Check{}
 	c3 := &Check{}
@@ -46,8 +45,8 @@ func TestSubscribe(t *testing.T) {
 }
 
 func TestUnsubscribe(t *testing.T) {
-	sub1 := &mock.SubscriberMock{}
-	sub2 := &mock.SubscriberMock{}
+	sub1 := &SubscriberMock{}
+	sub2 := &SubscriberMock{}
 	c1 := &Check{}
 	c2 := &Check{}
 	c3 := &Check{}
@@ -85,13 +84,13 @@ func TestUnsubscribe(t *testing.T) {
 		})
 
 		Convey("Then Unsubscribing a subscriber that was not subscrived has no effect", func() {
-			hc.Unsubscribe(&mock.SubscriberMock{}, c1, c2)
+			hc.Unsubscribe(&SubscriberMock{}, c1, c2)
 			So(hc.subscribers, ShouldResemble, map[Subscriber]map[*Check]struct{}{
 				sub1: {c1: {}, c2: {}},
 				sub2: {c2: {}, c3: {}},
 			})
 
-			hc.UnsubscribeAll(&mock.SubscriberMock{})
+			hc.UnsubscribeAll(&SubscriberMock{})
 			So(hc.subscribers, ShouldResemble, map[Subscriber]map[*Check]struct{}{
 				sub1: {c1: {}, c2: {}},
 				sub2: {c2: {}, c3: {}},
@@ -104,8 +103,8 @@ func TestNotifyHealthUpdate(t *testing.T) {
 	t0 := time.Now().UTC()
 	t10 := t0.Add(-10 * time.Minute) // 10 min ago
 
-	sub1 := &mock.SubscriberMock{OnHealthUpdateFunc: func(status string) {}}
-	sub2 := &mock.SubscriberMock{OnHealthUpdateFunc: func(status string) {}}
+	sub1 := &SubscriberMock{OnHealthUpdateFunc: func(status string) {}}
+	sub2 := &SubscriberMock{OnHealthUpdateFunc: func(status string) {}}
 	c1 := createATestCheck(CheckState{
 		status:      StatusOK,
 		lastChecked: &t0,
