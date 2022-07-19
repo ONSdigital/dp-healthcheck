@@ -1,6 +1,6 @@
 module github.com/ONSdigital/dp-healthcheck
 
-go 1.17
+go 1.18
 
 replace golang.org/x/crypto => golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
 
@@ -19,4 +19,5 @@ require (
 	github.com/mattn/go-isatty v0.0.12 // indirect
 	github.com/smartystreets/assertions v0.0.0-20180927180507-b2de0cb4f26d // indirect
 	golang.org/x/sys v0.0.0-20210615035016-665e8c7367d1 // indirect
+	golang.org/x/text v0.3.7 // indirect
 )
