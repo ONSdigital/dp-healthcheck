@@ -1,14 +1,18 @@
 # dp-healthcheck
 
-A health check library for ONS Digital Publishing that implements the [Health Check Specification](https://github.com/ONSdigital/dp/blob/master/standards/HEALTH_CHECK_SPECIFICATION.md).
+A health check library for ONS Digital Publishing that implements the [Health Check Specification](https://github.com/ONSdigital/dp-standards/blob/main/HEALTH_CHECK_SPECIFICATION.md).
 
 All Digital Publishing apps must implement a health check using this library.  Functions that implement the `Checker` type are registered with the library which will check internal and external measures of the app's health.  The library will then call these functions periodically to determine the overall health of the app and report this back using the included handler.
 
 ## Getting started
 
-* [Add health check to an app](#adding-a-health-check-to-an-app)
-* [Subscribing an app to health changes](#subscribing-an-app-to-health-changes)
-* [Implementing a `Checker` function](#implementing-a-checker)
+- [dp-healthcheck](#dp-healthcheck)
+  - [Getting started](#getting-started)
+  - [Adding a health check to an app](#adding-a-health-check-to-an-app)
+  - [Subscribing an app to health changes](#subscribing-an-app-to-health-changes)
+  - [Implementing a checker](#implementing-a-checker)
+  - [Contributing](#contributing)
+  - [License](#license)
 
 ## Adding a health check to an app
 
