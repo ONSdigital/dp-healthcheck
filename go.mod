@@ -1,8 +1,11 @@
 module github.com/ONSdigital/dp-healthcheck
 
-go 1.17
+go 1.18
 
-replace golang.org/x/crypto => golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
+replace (
+	golang.org/x/crypto => golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d
+	golang.org/x/text => golang.org/x/text v0.3.7
+)
 
 require (
 	github.com/ONSdigital/log.go/v2 v2.0.9
