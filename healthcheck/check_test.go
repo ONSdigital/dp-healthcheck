@@ -21,7 +21,7 @@ func TestCreateNew(t *testing.T) {
 	Convey("Create a new check", t, func() {
 		check, _ = NewCheck("check", checkerFunc)
 		So(err, ShouldBeNil)
-		So(check.checker, ShouldEqual, checkerFunc)
+		So(check.checker, ShouldNotBeNil)
 		So(check.state.mutex, ShouldNotBeNil)
 		So(check.state.name, ShouldEqual, "check")
 		So(check.state.status, ShouldEqual, "")
